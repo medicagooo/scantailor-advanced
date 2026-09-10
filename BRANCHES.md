@@ -52,7 +52,7 @@
       "domain": "Scanning / interactive CLI",
       "date": "2026-09-11",
       "implementedAt": "2026-09-11T01:04:41.9034643+08:00",
-      "status": "implemented_unmerged",
+      "status": "integrated_local",
       "evidence": [
         "docs/MENU.md",
         "tests/menu_integration.py",
@@ -62,7 +62,7 @@
         "src/cli/MenuLauncher.cpp",
         "docs/VERIFICATION.md"
       ],
-      "integratedAt": null,
+      "integratedAt": "2026-09-11T01:07:08.5300391+08:00",
       "deployedAt": null,
       "request": "0911-cli-menu/req-menu-execute",
       "id": "cli-menu-001",
@@ -71,6 +71,6 @@
   ],
   "format": 1,
   "pending": [
-    "0911-cli-menu/op-menu-merge"
+    "0911-cli-menu/op-menu-push"
   ]
 }

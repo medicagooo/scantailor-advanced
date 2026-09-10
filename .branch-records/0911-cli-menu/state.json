@@ -15,10 +15,11 @@
     "docs/MENU.md",
     "docs/VERIFICATION.md",
     "tests/menu_integration.py",
-    "tests/cli_full_integration.py"
+    "tests/cli_full_integration.py",
+    "Local master verified at be3e774234234963e90be3e4af8115282b4009c7 after op-menu-merge"
   ],
-  "next": "Commit verified CLI 3 implementation and registry; fast-forward master via op-menu-merge; predeclare and commit normal origin/master push, then verify local/cloud SHAs.",
-  "integration": "unmerged",
+  "next": "Normal push refs/heads/master to origin refs/heads/master via op-menu-push after committing this predeclaration; verify local and remote SHAs and clean worktree. Pending pointer may remain until next ordinary registry update.",
+  "integration": "verified",
   "purpose": "Keyboard and mouse CLI menu covering the complete document processing workflow",
   "constraints": [
     "Windows native PowerShell; retain existing script CLI contracts",
