@@ -14,11 +14,11 @@
     "Resume and failures tested"
   ],
   "status": "complete",
-  "next": "Implementation verified complete; use the portable PDF entry and review results. Push or integration requires a new user instruction.",
+  "next": "Execute predeclared push op-0910-push-master and verify remote master SHA. Pending is intent, not success; reconcile with live refs before retry.",
   "purpose": "Add native CLI and PDF folder processing",
   "constraints": [
     "Windows native PowerShell",
-    "No push authorized",
+    "Normal push to origin/master explicitly authorized by req-0910-push-master; no force",
     "Preserve GUI and source PDFs"
   ],
   "requirements": [
