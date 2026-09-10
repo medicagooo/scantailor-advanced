@@ -149,6 +149,7 @@ class ProjectWriter {
   Images m_images;
   Pages m_pages;
   MetadataByImage m_metadataByImage;
+  std::unordered_map<ImageId, QString> m_stableIds;
   Qt::LayoutDirection m_layoutDirection;
 };
 

@@ -2,6 +2,7 @@ set(common_ui_files
     ErrorWidget.ui)
 
 set(common_sources
+    ProcessingConfiguration.cpp ProcessingConfiguration.h
     CompositeTaskFactory.cpp CompositeTaskFactory.h
     Application.cpp Application.h
     BackgroundExecutor.cpp BackgroundExecutor.h

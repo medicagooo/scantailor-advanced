@@ -93,3 +93,15 @@ if (Qt6_FOUND AND WIN32)
 endif()
 
 translation_sources(${target_name} ${gui_only_sources} ${gui_only_ui_files})
+
+if (BUILD_TESTS)
+  # Exercise the actual GUI open/edit/save slots against CLI-created projects,
+  # without adding test-only switches to the distributed application.
+  set(roundtrip_sources ${gui_only_sources})
+  list(REMOVE_ITEM roundtrip_sources main.cpp)
+  add_executable(scantailor-gui-roundtrip ${roundtrip_sources} ${gui_only_ui_files}
+      ${resource_files} "${CMAKE_SOURCE_DIR}/tests/gui_project_roundtrip.cpp")
+  target_link_libraries(scantailor-gui-roundtrip PRIVATE core ${EXTRA_LIBS})
+  target_include_directories(scantailor-gui-roundtrip PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
+      "$<TARGET_PROPERTY:TIFF::TIFF,INTERFACE_INCLUDE_DIRECTORIES>")
+endif()

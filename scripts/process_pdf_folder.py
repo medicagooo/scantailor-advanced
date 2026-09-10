@@ -26,7 +26,7 @@ for _stream in (sys.stdout, sys.stderr):
 import pymupdf
 from PIL import Image
 
-VERSION = 1
+VERSION = 2
 
 
 def emit(event: str, **fields) -> None:
@@ -129,7 +129,7 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
     state_path = work / "state.json"
     previous = load_json(state_path)
     signature = {"version": VERSION, "source": str(source), "source_sha256": sha256(source),
-                 "cli_sha256": sha256(args.cli), "dpi": args.dpi, "config_sha256": config_hash,
+                 "cli_sha256": sha256(args.cli), "dpi": args.dpi, "page_size": args.page_size, "config_sha256": config_hash,
                  "wrapper_sha256": sha256(Path(__file__)), "pymupdf_version": pymupdf.VersionBind}
     fingerprint = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()
     if destination.exists() and not (args.overwrite or (args.resume and previous.get("destination") == str(destination))):
@@ -169,7 +169,15 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
                 rendered[str(index)] = {"sha256": sha256(image_path)}
                 save_json(render_state_path, {"pages": rendered})
             emit("page_rendered", input=str(source), page=index+1, total=original.page_count)
-        command = [str(args.cli), "process", "--input", str(images), "--output", str(processed),
+        # Stable image identities derive from the source PDF and source page,
+        # not the generation folder (which changes when configuration changes).
+        manifest = generation / "inputs.json"
+        source_hash = sha256(source)
+        save_json(manifest, {"schema_version": 1, "files": [
+            {"path": str(images / f"{i+1:05d}.png"),
+             "stable_id": hashlib.sha256(f"{source_hash}:{i+1}".encode()).hexdigest()}
+            for i in range(original.page_count)]})
+        command = [str(args.cli), "process", "--manifest", str(manifest), "--output", str(processed),
                    "--dpi", str(args.dpi), "--jobs", str(args.jobs)]
         if args.config:
             command += ["--config", str(args.config)]
@@ -181,48 +189,74 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
         if code not in (0, 1):
             raise RuntimeError(f"CLI failed with code {code}; see {generation / 'events.jsonl'}")
         native = load_json(processed / "report.json")
-        if native.get("schema_version") != 1:
+        if native.get("schema_version") not in (1, 2):
             raise RuntimeError("Missing or incompatible CLI report")
-        by_input = {str(Path(p["input"]).resolve()).casefold(): p for p in native["pages"]}
+        by_input = {}
+        for record in native["pages"]:
+            key = str(Path(record["input"]).resolve()).casefold()
+            by_input.setdefault(key, []).append(record)
         reports = []
+        output_dimensions = []
+        source_to_output = {}
         result_pdf = pymupdf.open()
         try:
             for index, (width, height) in enumerate(dimensions):
                 image_path = images / f"{index+1:05d}.png"
-                record = by_input.get(str(image_path.resolve()).casefold(), {})
-                status = record.get("status", "error")
-                image_out = Path(record.get("output", ""))
-                # Preserve the exact original PDF page on any uncertain/error
-                # result; don't replace it with another lossy rasterization.
-                if status != "complete":
+                records = by_input.get(str(image_path.resolve()).casefold(), [])
+                source_to_output[index+1] = result_pdf.page_count + 1
+                sides = [r.get("subpage", "single") for r in records]
+                valid_structure = (len(records) == 1 and sides == ["single"]) or (
+                    len(records) == 2 and set(sides) == {"left", "right"})
+                # A source spread is the recovery unit. Never duplicate its
+                # whole original for both failed halves or silently lose one.
+                if not valid_structure or any(r.get("status") != "complete" for r in records):
                     result_pdf.insert_pdf(original, from_page=index, to_page=index)
-                else:
+                    output_dimensions.append((width, height))
+                    reports.append({"page": result_pdf.page_count, "source_page": index+1,
+                        "status": "review", "rendered_input": str(image_path), "output_image": None,
+                        "fallback_original_pdf": True, "metrics": {}, "warnings": ["source_page_preserved"],
+                        "message": "One or more logical pages require review; preserved the source PDF page once.",
+                        "logical_pages": records})
+                    continue
+                for record in records:
+                    image_out = Path(record.get("output", ""))
                     if not image_out.is_file() or record.get("sha256") != sha256(image_out):
                         raise RuntimeError(f"Unverified output for page {index+1}")
                     with Image.open(image_out) as image:
                         buffer = io.BytesIO()
                         image.convert("RGB").save(buffer, format="PNG")
-                    target = result_pdf.new_page(width=width, height=height)
+                        if args.page_size == "processed":
+                            output_dpi = record.get("settings", {}).get("output", {}).get("dpi", [args.dpi, args.dpi])
+                            target_width, target_height = image.width * 72 / output_dpi[0], image.height * 72 / output_dpi[1]
+                        elif len(records) == 2:
+                            rotation = record.get("settings", {}).get("orientation", {}).get("rotation", 0)
+                            rotated_width, rotated_height = (height, width) if rotation % 180 else (width, height)
+                            target_width, target_height = rotated_width / 2, rotated_height
+                        else:
+                            target_width, target_height = width, height
+                    target = result_pdf.new_page(width=target_width, height=target_height)
                     target.insert_image(target.rect, stream=buffer.getvalue(), keep_proportion=True)
-                reports.append({"page": index+1, "status": status,
-                    "rendered_input": str(image_path), "output_image": str(image_out) if image_out.is_file() else None,
-                    "fallback_original_pdf": status != "complete", "metrics": record.get("metrics", {}),
-                    "warnings": record.get("warnings", []), "message": record.get("message", "")})
+                    output_dimensions.append((target_width, target_height))
+                    reports.append({"page": result_pdf.page_count, "source_page": index+1,
+                        "logical_id": record.get("id"), "subpage": record.get("subpage", "single"), "status": "complete",
+                        "rendered_input": str(image_path), "output_image": str(image_out),
+                        "fallback_original_pdf": False, "metrics": record.get("metrics", {}),
+                        "warnings": record.get("warnings", []), "message": record.get("message", "")})
             # Keep document-level navigation and descriptive metadata when possible.
             result_pdf.set_metadata(original.metadata)
             toc = original.get_toc()
             if toc:
-                result_pdf.set_toc(toc)
+                result_pdf.set_toc([[level, title, source_to_output.get(page, page)] for level, title, page in toc])
             destination.parent.mkdir(parents=True, exist_ok=True)
             pending = destination.with_suffix(".pending.pdf")
             result_pdf.save(pending, garbage=3, deflate=True)
         finally:
             result_pdf.close()
         with pymupdf.open(pending) as check:
-            if check.page_count != original.page_count:
+            if check.page_count != len(output_dimensions):
                 raise RuntimeError("Output page count mismatch")
             for index, page in enumerate(check):
-                expected = dimensions[index]
+                expected = output_dimensions[index]
                 if abs(page.rect.width - expected[0]) > 0.1 or abs(page.rect.height - expected[1]) > 0.1:
                     raise RuntimeError(f"Page size mismatch at {index+1}")
                 page.get_pixmap(matrix=pymupdf.Matrix(0.2, 0.2), alpha=False)
@@ -230,7 +264,8 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
     review = write_review(generation, reports)
     result = {"input": str(source), "output": str(destination), "page_count": len(reports),
               "complete_pages": sum(p["status"] == "complete" for p in reports),
-              "review_pages": sum(p["status"] != "complete" for p in reports), "review": str(review), "pages": reports}
+              "review_pages": sum(p["status"] != "complete" for p in reports), "review": str(review), "pages": reports,
+              "source_to_output": source_to_output}
     save_json(generation / "report.json", result)
     state.update(status="complete", output_sha256=sha256(destination), result=result)
     save_json(state_path, state)
@@ -246,6 +281,7 @@ def main() -> int:
     parser.add_argument("--config", type=Path)
     parser.add_argument("--dpi", type=int, default=300)
     parser.add_argument("--jobs", type=int, default=1)
+    parser.add_argument("--page-size", choices=("original", "processed"), default="original")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--recursive", action="store_true")
@@ -266,7 +302,7 @@ def main() -> int:
         config = load_json(args.config)
         # The PDF wrapper owns all paths and job-lifecycle controls. Only image
         # processing options may be supplied through its config file.
-        reserved = {"input", "output", "project", "save-project", "resume", "overwrite", "jobs", "dpi"}
+        reserved = {"input", "output", "project", "save-project", "resume", "overwrite", "jobs", "dpi", "manifest", "save", "operations", "through", "stage", "pages"}
         if reserved.intersection(config):
             parser.error("PDF config must not override paths, dpi, jobs or resume/overwrite")
         config_hash = sha256(args.config)

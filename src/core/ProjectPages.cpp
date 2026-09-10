@@ -4,6 +4,9 @@
 #include "ProjectPages.h"
 
 #include <QDebug>
+#include <QCryptographicHash>
+#include <QFileInfo>
+#include <QDir>
 #include <boost/foreach.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -62,6 +65,43 @@ ProjectPages::ProjectPages(const std::vector<ImageFileInfo>& files,
 }
 
 ProjectPages::~ProjectPages() = default;
+
+QString ProjectPages::stableImageId(const ImageId& image) const {
+  QMutexLocker locker(&m_mutex);
+  auto& value = m_stableIds[image];
+  if (value.isEmpty()) {
+    QString path = QDir::cleanPath(QFileInfo(image.filePath()).absoluteFilePath());
+#ifdef Q_OS_WIN
+    path = path.toCaseFolded();
+#endif
+    value = QString::fromLatin1(QCryptographicHash::hash(
+        (path + "#" + QString::number(image.page())).toUtf8(), QCryptographicHash::Sha256).toHex());
+  }
+  return value;
+}
+
+void ProjectPages::setStableImageId(const ImageId& image, const QString& stableId) {
+  QMutexLocker locker(&m_mutex);
+  if (!stableId.isEmpty()) m_stableIds[image] = stableId;
+}
+
+bool ProjectPages::reorderImages(const std::vector<ImageId>& order) {
+  {
+    QMutexLocker locker(&m_mutex);
+    if (order.size() != m_images.size()) return false;
+    std::vector<ImageDesc> reordered;
+    std::set<ImageId> seen;
+    for (const auto& id : order) {
+      if (!seen.insert(id).second) return false;
+      const auto found = std::find_if(m_images.begin(), m_images.end(), [&](const ImageDesc& i) { return i.id == id; });
+      if (found == m_images.end()) return false;
+      reordered.push_back(*found);
+    }
+    m_images.swap(reordered);
+  }
+  emit modified();
+  return true;
+}
 
 Qt::LayoutDirection ProjectPages::layoutDirection() const {
   if (m_subPagesInOrder[0] == PageId::LEFT_PAGE) {
@@ -141,13 +181,18 @@ void ProjectPages::listRelinkablePaths(const VirtualFunction<void, const Relinka
 }
 
 void ProjectPages::performRelinking(const AbstractRelinker& relinker) {
+  // Materialize identities before changing paths, including older projects.
+  for (const auto& page : toPageSequence(IMAGE_VIEW)) stableImageId(page.imageId());
   QMutexLocker locker(&m_mutex);
-
+  std::unordered_map<ImageId, QString> identities;
   for (ImageDesc& image : m_images) {
     const RelinkablePath oldPath(image.id.filePath(), RelinkablePath::File);
     const QString newPath(relinker.substitutionPathFor(oldPath));
+    const QString identity = m_stableIds[image.id];
     image.id.setFilePath(newPath);
+    identities[image.id] = identity;
   }
+  m_stableIds.swap(identities);
 }
 
 void ProjectPages::setLayoutTypeFor(const ImageId& imageId, const LayoutType layout) {

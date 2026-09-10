@@ -152,6 +152,7 @@ class Settings::Impl {
   QSizeF getAggregateHardSizeMM(const PageId& pageId, const QSizeF& hardSizeMm, const Alignment& alignment) const;
 
   void setAggregateHardSizeFrozen(bool frozen);
+  void setFrozenAggregateHardSizeMM(const QSizeF& size);
 
   bool isAggregateHardSizeFrozen() const;
 
@@ -288,6 +289,8 @@ QSizeF Settings::getAggregateHardSizeMM(const PageId& pageId,
 void Settings::setAggregateHardSizeFrozen(const bool frozen) {
   m_impl->setAggregateHardSizeFrozen(frozen);
 }
+
+void Settings::setFrozenAggregateHardSizeMM(const QSizeF& size) { m_impl->setFrozenAggregateHardSizeMM(size); }
 
 bool Settings::isAggregateHardSizeFrozen() const {
   return m_impl->isAggregateHardSizeFrozen();
@@ -636,6 +639,11 @@ void Settings::Impl::setAggregateHardSizeFrozen(const bool frozen) {
 bool Settings::Impl::isAggregateHardSizeFrozen() const {
   const QMutexLocker locker(&m_mutex);
   return m_frozenAggregateHardSizeMm.has_value();
+}
+
+void Settings::Impl::setFrozenAggregateHardSizeMM(const QSizeF& size) {
+  const QMutexLocker locker(&m_mutex);
+  if (size.width() > 0 && size.height() > 0) m_frozenAggregateHardSizeMm = size;
 }
 
 QSizeF Settings::Impl::getAggregateHardSizeMM(const PageId& pageId,

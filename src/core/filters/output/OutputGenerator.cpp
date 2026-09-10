@@ -1440,7 +1440,6 @@ std::unique_ptr<OutputImage> OutputGenerator::Processor::processWithoutDewarping
           combineImages(maybeNormalized, segmentedImage, bwMask);
         }
       }
-      bwContent.release();  // Save memory.
       if (m_dbg) {
         m_dbg->add(maybeNormalized, "combined");
       }
@@ -1456,6 +1455,8 @@ std::unique_ptr<OutputImage> OutputGenerator::Processor::processWithoutDewarping
         bwContentOutput = BinaryImage(m_targetSize, WHITE);
         rasterOp<RopSrc>(bwContentOutput, m_croppedContentRect, bwContent, m_contentRectInWorkingCs.topLeft());
       }
+      // Original-background separation above still needs this mask, in both GUI and CLI processing.
+      bwContent.release();
     }
 
     bwContentMaskOutput = BinaryImage(m_targetSize, BLACK);

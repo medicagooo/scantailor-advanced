@@ -2,9 +2,9 @@
 
 This local build contains ScanTailor Advanced (GPL-3.0; root `LICENSE`) from
 `https://github.com/medicagooo/scantailor-advanced`, based on commit
-`5eaac1884cdcabb6514bd632114f688631bd8dbc`, plus this branch's CLI changes.
+`f9bf198e2797863c31408b2c1f84acac8c4fdd0d`, plus the 0910-cli-full branch's CLI 2 changes.
 
-Build inputs used on 2026-09-10:
+Build inputs used on 2026-09-10 and 2026-09-11:
 
 - Qt 6.8.3, official MinGW 64-bit archives (Qt open-source licenses).
 - Qt Tools MinGW 13.1.0, including GCC runtime and winpthreads (GCC runtime exception and respective runtime licenses).

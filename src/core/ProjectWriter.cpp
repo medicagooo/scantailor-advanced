@@ -5,6 +5,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QSaveFile>
 #include <QFileInfo>
 #include <QTextStream>
 #include <QtXml>
@@ -44,6 +45,7 @@ ProjectWriter::ProjectWriter(const std::shared_ptr<ProjectPages>& pageSequence,
     const QString dirPath(fileInfo.absolutePath());
 
     m_metadataByImage[imageId] = page.metadata();
+    m_stableIds[imageId] = pageSequence->stableImageId(imageId);
 
     if (m_dirs.insert(Directory(dirPath, nextId)).second) {
       ++nextId;
@@ -102,11 +104,12 @@ bool ProjectWriter::write(const QString& filePath, const std::vector<FilterPtr>&
     filtersEl.appendChild((*it)->saveSettings(*this, doc));
   }
 
-  QFile file(filePath);
+  QSaveFile file(filePath);
   if (file.open(QIODevice::WriteOnly)) {
     QTextStream strm(&file);
     doc.save(strm, 2);
-    return true;
+    strm.flush();
+    return strm.status() == QTextStream::Ok && file.commit();
   }
   return false;
 }  // ProjectWriter::write
@@ -144,6 +147,7 @@ QDomElement ProjectWriter::processImages(QDomDocument& doc) const {
   for (const Image& image : m_images.get<Sequenced>()) {
     QDomElement imageEl(doc.createElement("image"));
     imageEl.setAttribute("id", image.numericId);
+    imageEl.setAttribute("stableId", m_stableIds.at(image.id));
     imageEl.setAttribute("subPages", image.numSubPages);
     imageEl.setAttribute("fileId", fileId(image.id.filePath()));
     imageEl.setAttribute("fileImage", image.id.page());

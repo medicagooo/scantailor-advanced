@@ -63,6 +63,7 @@ foreach ($name in @('Process-PdfFolder.ps1', 'process_pdf_folder.py', 'requireme
 }
 Copy-Item -LiteralPath (Join-Path $sourceDir 'LICENSE') -Destination $packagePath
 Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/CLI.md') -Destination (Join-Path $packagePath 'README-CLI.md')
+Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/CLI-COVERAGE.md') -Destination $packagePath
 Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/THIRD-PARTY.md') -Destination $packagePath
 if ($PythonEmbedZip -or $PythonPackagesRoot) {
     if (-not ($PythonEmbedZip -and $PythonPackagesRoot)) { throw 'Supply both PythonEmbedZip and PythonPackagesRoot.' }

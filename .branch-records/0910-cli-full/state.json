@@ -1,0 +1,30 @@
+{
+  "acceptance": [
+    "Every business capability mapped to CLI interface and tests",
+    "GUI and CLI project round-trip preserves settings",
+    "Local build and regression pass",
+    "Review findings repaired"
+  ],
+  "evidence": [
+    "docs/CLI.md",
+    "docs/CLI-COVERAGE.md",
+    "tests/cli_full_integration.py",
+    "tests/gui_project_roundtrip.cpp",
+    "docs/VERIFICATION.md"
+  ],
+  "status": "complete",
+  "next": "No implementation work remains. Use the CLI 2 portable package; integration/push is not authorized.",
+  "integration": "unmerged",
+  "purpose": "Complete CLI business coverage with shared GUI-compatible project settings",
+  "requirements": [
+    "Execute approved P0-P5 plan: project/page management, complete six-stage settings, geometry/zones, staged processing, PDF split mapping, compatibility tests",
+    "Independent review and repair of findings; local build and tests"
+  ],
+  "constraints": [
+    "Windows native PowerShell",
+    "No new push authorized",
+    "Preserve GUI and existing v1 CLI behavior",
+    "Explicit geometry coordinates and stable page identity",
+    "Keep source PDFs unchanged"
+  ]
+}

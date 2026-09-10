@@ -207,6 +207,12 @@ void ProjectReader::processImages(const QDomElement& imagesEl, const Qt::LayoutD
 
   if (!images.empty()) {
     m_pages = std::make_shared<ProjectPages>(images, layoutDirection);
+    // Optional attribute keeps old .scan files readable and new GUI saves
+    // preserve CLI identities without changing ScanTailor's numeric IDs.
+    for (auto el = imagesEl.firstChildElement("image"); !el.isNull(); el = el.nextSiblingElement("image")) {
+      const auto image = getImageInfo(el.attribute("id").toInt());
+      if (!image.id().filePath().isEmpty()) m_pages->setStableImageId(image.id(), el.attribute("stableId"));
+    }
   }
 }  // ProjectReader::processImages
 

@@ -80,6 +80,13 @@ QDomElement Filter::saveSettings(const ProjectWriter& writer, QDomDocument& doc)
   QDomElement filterEl(doc.createElement("page-layout"));
 
   filterEl.setAttribute("showMiddleRect", m_settings->isShowingMiddleRectEnabled() ? "1" : "0");
+  // Persist the actual reference dimensions, not just the UI toggle. CLI and
+  // GUI must use the same target after a save/reload or a selected-page run.
+  if (m_settings->isAggregateHardSizeFrozen()) {
+    const auto size = m_settings->getAggregateHardSizeMM();
+    filterEl.setAttribute("frozenWidthMM", QString::number(size.width(), 'g', 17));
+    filterEl.setAttribute("frozenHeightMM", QString::number(size.height(), 'g', 17));
+  }
 
   if (!m_settings->guides().empty()) {
     QDomElement guidesEl(doc.createElement("guides"));
@@ -155,6 +162,8 @@ void Filter::loadSettings(const ProjectReader& reader, const QDomElement& filter
     const Params params(paramsEl);
     m_settings->setPageParams(pageId, params);
   }
+  if (filterEl.hasAttribute("frozenWidthMM") && filterEl.hasAttribute("frozenHeightMM"))
+    m_settings->setFrozenAggregateHardSizeMM(QSizeF(filterEl.attribute("frozenWidthMM").toDouble(), filterEl.attribute("frozenHeightMM").toDouble()));
 }  // Filter::loadSettings
 
 void Filter::setContentBox(const PageId& pageId, const ImageTransformation& xform, const QRectF& contentRect) {

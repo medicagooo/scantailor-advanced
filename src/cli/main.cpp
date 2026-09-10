@@ -1,5 +1,6 @@
 // Copyright (C) 2026. Distributed under the GNU GPLv3 license.
 #include "BatchRunner.h"
+#include "ProjectSession.h"
 #include <core/Application.h>
 #include <core/ColorSchemeFactory.h>
 #include <core/ColorSchemeManager.h>
@@ -9,6 +10,7 @@
 #include <QFile>
 #include <QImageReader>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QSettings>
 #include <QTemporaryDir>
 #include <cmath>
@@ -43,7 +45,7 @@ int main(int argc, char** argv) {
   Application app(argc, argv, false);
   QCoreApplication::setApplicationName("scantailor-cli");
   QCoreApplication::setOrganizationName("ScanTailorCLI");
-  QCoreApplication::setApplicationVersion("1.0.0");
+  QCoreApplication::setApplicationVersion("2.0.0");
   QSettings::setDefaultFormat(QSettings::IniFormat);
   QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
   QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, settingsDir.path());
@@ -56,10 +58,10 @@ int main(int argc, char** argv) {
   parser.setApplicationDescription("Unattended ScanTailor image processing. JSONL events on stdout; diagnostics on stderr.");
   parser.addHelpOption();
   parser.addVersionOption();
-  parser.addPositionalArgument("command", "process or doctor");
-  const QStringList paths = {"input", "output", "project", "save-project", "config"};
+  parser.addPositionalArgument("command", "process, analyze, preview, review, project create/inspect/apply/edit, pages list, config schema/export, geometry map, capabilities, doctor");
+  const QStringList paths = {"input", "output", "project", "save-project", "config", "manifest", "save", "operations", "geometry"};
   for (const auto& name : paths) parser.addOption({name, name + " path", "path"});
-  const QStringList strings = {"preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp"};
+  const QStringList strings = {"preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp", "through", "stage", "pages", "review-policy"};
   for (const auto& name : strings) parser.addOption({name, name + " setting (see docs/CLI.md)", "value"});
   const QStringList numbers = {"dpi", "output-dpi", "rotate", "deskew-angle", "margin-mm", "jobs", "max-angle", "min-page-ratio"};
   for (const auto& name : numbers) parser.addOption({name, name + " numeric value", "number"});
@@ -67,30 +69,45 @@ int main(int argc, char** argv) {
   for (const auto& name : booleans) parser.addOption({name, name + " true or false", "boolean"});
   parser.addOption({"resume", "Reuse verified completed outputs from this job."});
   parser.addOption({"overwrite", "Allow replacing outputs belonging to this job."});
+  parser.addOption({"json", "Emit machine-readable data (default)."});
+  parser.addOption({"dry-run", "Validate and show edits without saving."});
+  parser.addOption({"html", "Write an HTML review report."});
   try {
     if (!parser.parse(app.arguments())) fail(parser.errorText());
     if (parser.isSet("help")) { std::fputs(parser.helpText().toUtf8().constData(), stdout); return 0; }
-    if (parser.isSet("version")) { std::puts("scantailor-cli 1.0.0"); return 0; }
-    if (parser.positionalArguments().size() != 1) fail("Specify process or doctor; use --help.");
-    const QString command = parser.positionalArguments().first();
+    if (parser.isSet("version")) { std::puts("scantailor-cli 2.0.0"); return 0; }
+    const QString command = parser.positionalArguments().join(' ');
+    if (QStringList{"config schema", "capabilities", "doctor"}.contains(command))
+      for (const auto& key : parser.optionNames()) if (key != "json") fail("Option --" + key + " does not apply to " + command);
+    if (command == "config schema") { cli::emitEvent(processing::schema()); return 0; }
+    if (command == "capabilities") {
+      cli::emitEvent({{"schema_version", 2}, {"commands", QJsonArray{"doctor", "capabilities", "config schema", "config export", "project create", "project inspect", "project apply", "project edit", "pages list", "geometry map", "analyze", "preview", "process", "review"}},
+        {"stages", QJsonArray{"orientation", "split", "deskew", "content", "layout", "output"}}, {"configuration", processing::schema()}}); return 0;
+    }
     if (command == "doctor") {
       QStringList formats;
       for (const auto& f : QImageReader::supportedImageFormats()) formats << QString::fromLatin1(f);
-      cli::emitEvent({{"event", "doctor"}, {"cli_version", "1.0.0"}, {"qt_version", qVersion()},
+      cli::emitEvent({{"event", "doctor"}, {"cli_version", "2.0.0"}, {"qt_version", qVersion()},
                       {"platform", "offscreen"}, {"qt_image_formats", formats.join(",")},
                       {"core_image_formats", "png,jpeg,tiff"}, {"status", "ok"}});
       return 0;
     }
-    if (command != "process") fail("Unknown command: " + command);
+    const QStringList management{"project create", "project inspect", "project apply", "project edit", "pages list", "config export", "geometry map"};
+    if (command != "process" && command != "analyze" && command != "preview" && command != "review" && !management.contains(command)) fail("Unknown command: " + command);
     QJsonObject options;
+    QJsonObject configuration;
     if (parser.isSet("config")) {
       QFile file(parser.value("config"));
       if (!file.open(QIODevice::ReadOnly)) fail("Cannot read configuration.");
       QJsonParseError error;
       const auto doc = QJsonDocument::fromJson(file.readAll(), &error);
       if (error.error != QJsonParseError::NoError || !doc.isObject()) fail("Configuration must be a JSON object.");
-      options = doc.object();
-      if (options.take("schema_version").toInt() != 1) fail("Configuration schema_version must be 1.");
+      if (doc.object().value("schema_version") == 2) {
+        configuration = doc.object(); processing::validateConfiguration(configuration);
+      } else {
+        options = doc.object();
+        if (options.take("schema_version") != 1) fail("Configuration schema_version must be 1 or 2.");
+      }
     }
     QStringList allowed = paths + strings + numbers + booleans + QStringList{"resume", "overwrite"};
     allowed.removeAll("config");
@@ -114,11 +131,26 @@ int main(int argc, char** argv) {
         options[key] = value == "true";
       }
     }
-    for (const auto& key : QStringList{"resume", "overwrite"}) if (parser.isSet(key)) options[key] = true;
+    for (const auto& key : QStringList{"resume", "overwrite", "dry-run", "html"}) if (parser.isSet(key)) options[key] = true;
     for (const auto& key : booleans + QStringList{"resume", "overwrite"})
       if (options.contains(key) && !options[key].isBool()) fail("Expected a boolean: " + key);
     for (const auto& key : paths + strings)
       if (options.contains(key) && !options[key].isString()) fail("Expected a string: " + key);
+    auto onlyFor = [&](const QString& key, const QStringList& commands) {
+      if (options.contains(key) && !commands.contains(command)) fail("Option --" + key + " does not apply to " + command);
+    };
+    onlyFor("operations", {"project edit"}); onlyFor("geometry", {"geometry map"});
+    onlyFor("stage", {"preview"}); onlyFor("through", {"process", "analyze"});
+    onlyFor("dry-run", {"project create", "project apply", "project edit"});
+    onlyFor("resume", {"process", "analyze", "preview"}); onlyFor("pages", {"process", "analyze", "preview"});
+    onlyFor("html", {"process", "analyze", "preview", "review"}); onlyFor("jobs", {"process", "analyze", "preview"});
+    for (const auto& key : {"max-angle", "min-page-ratio", "review-policy"}) onlyFor(key, {"process", "analyze", "preview"});
+    onlyFor("save", management);
+    if (command == "review") for (const auto& key : options.keys()) if (key != "output" && key != "html") fail("Option --" + key + " does not apply to review");
+    if (command == "review" && parser.isSet("config")) fail("review does not accept --config");
+    if (command == "project edit" && !options.contains("operations")) fail("project edit requires --operations");
+    if (command == "geometry map" && !options.contains("geometry")) fail("geometry map requires --geometry");
+    if (options.contains("save") && options.contains("save-project")) fail("Specify only one save destination");
     auto range = [&](const QString& key, double lo, double hi, bool integer = false) {
       if (!options.contains(key)) return;
       double v = options[key].toDouble();
@@ -140,12 +172,22 @@ int main(int argc, char** argv) {
       options["deskew"] = "manual";
     }
     if (options.value("deskew") == "manual" && !options.contains("deskew-angle")) fail("manual deskew requires deskew-angle.");
-    if (options.value("input").toString().isEmpty() == options.value("project").toString().isEmpty())
-      fail("Specify exactly one of --input and --project.");
-    if (options.value("output").toString().isEmpty()) fail("--output is required.");
+    choice("through", {"orientation", "split", "deskew", "content", "layout", "output"});
+    choice("stage", {"orientation", "split", "deskew", "content", "layout", "output"});
+    choice("review-policy", {"preserve", "report"});
+    options["command"] = command;
+    if (parser.isSet("config")) options["_config_path"] = cli::absolutePath(parser.value("config"));
+    if (!configuration.isEmpty()) options["configuration"] = configuration;
+    if (command != "review") {
+      int inputs = 0; for (const auto& key : {"input", "project", "manifest"}) if (!options.value(key).toString().isEmpty()) ++inputs;
+      if (inputs != 1) fail("Specify exactly one of --input, --manifest or --project.");
+      if (management.contains(command) && command != "project create" && !options.contains("project")) fail("This command requires --project.");
+    }
+    if (!management.contains(command) && options.value("output").toString().isEmpty()) fail("--output is required.");
     auto scheme = ColorSchemeFactory().create("light");
     ColorSchemeManager::instance().setColorScheme(*scheme);
     IconProvider::getInstance().setIconPack(StyledIconPack::createDefault());
+    if (management.contains(command)) return cli::projectCommand(command, options);
     return cli::run(options);
   } catch (const std::invalid_argument& error) {
     cli::emitEvent({{"event", "error"}, {"message", QString::fromUtf8(error.what())}, {"exit_code", 2}});

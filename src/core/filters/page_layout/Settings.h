@@ -147,6 +147,7 @@ class Settings {
    *        switching pages.
    */
   void setAggregateHardSizeFrozen(bool frozen);
+  void setFrozenAggregateHardSizeMM(const QSizeF& size);
 
   bool isAggregateHardSizeFrozen() const;
 

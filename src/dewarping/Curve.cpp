@@ -110,7 +110,9 @@ QDomElement Curve::serializeXSpline(const XSpline& xspline, QDomDocument& doc, c
   const int numControlPoints = xspline.numControlPoints();
   for (int i = 0; i < numControlPoints; ++i) {
     const QPointF pt(xspline.controlPointPosition(i));
-    el.appendChild(marshaller.pointF(pt, "point"));
+    auto point = marshaller.pointF(pt, "point");
+    point.setAttribute("tension", QString::number(xspline.controlPointTension(i), 'g', 17));
+    el.appendChild(point);
   }
   return el;
 }
@@ -127,12 +129,15 @@ XSpline Curve::deserializeXSpline(const QDomElement& el) {
     if (node.nodeName() != pointTagName) {
       continue;
     }
-    xspline.appendControlPoint(XmlUnmarshaller::pointF(node.toElement()), 1);
+    const auto point = node.toElement(); bool ok = false;
+    const auto tension = point.attribute("tension").toDouble(&ok);
+    xspline.appendControlPoint(XmlUnmarshaller::pointF(point), ok && tension >= -1 && tension <= 1 ? tension : 1);
   }
 
   if (xspline.numControlPoints() > 0) {
-    xspline.setControlPointTension(0, 0);
-    xspline.setControlPointTension(xspline.numControlPoints() - 1, 0);
+    // Old projects omit tension and use sharp endpoints, smooth interior controls.
+    if (!el.firstChildElement("point").hasAttribute("tension")) xspline.setControlPointTension(0, 0);
+    if (!el.lastChildElement("point").hasAttribute("tension")) xspline.setControlPointTension(xspline.numControlPoints() - 1, 0);
   }
   return xspline;
 }

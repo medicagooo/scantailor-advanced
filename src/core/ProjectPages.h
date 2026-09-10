@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <set>
 #include <vector>
+#include <unordered_map>
 
 #include "BeforeOrAfter.h"
 #include "ImageId.h"
@@ -52,6 +53,12 @@ class ProjectPages : public QObject {
    * \brief Swap logical order of left/right sub-pages for two-page layouts (issue #62).
    */
   void setLayoutDirection(Qt::LayoutDirection dir);
+
+  // Stable automation identity is persisted by ProjectReader/Writer and follows
+  // images through relinking. Logical page identities append single/left/right.
+  QString stableImageId(const ImageId& image) const;
+  void setStableImageId(const ImageId& image, const QString& stableId);
+  bool reorderImages(const std::vector<ImageId>& order);
 
   PageSequence toPageSequence(PageView view) const;
 
@@ -123,6 +130,7 @@ class ProjectPages : public QObject {
   void modified();
 
  private:
+  mutable std::unordered_map<ImageId, QString> m_stableIds;
   struct ImageDesc {
     ImageId id;
     ImageMetadata metadata;

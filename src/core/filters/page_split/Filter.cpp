@@ -135,8 +135,9 @@ void Filter::writeImageSettings(QDomDocument& doc,
 
   if (const Params* params = record.params()) {
     imageEl.appendChild(params->toXml(doc, "params"));
-    filterEl.appendChild(imageEl);
   }
+  // A chosen layout is a user setting even before split geometry has been analyzed.
+  if (record.layoutType() || record.params()) filterEl.appendChild(imageEl);
 }
 
 std::shared_ptr<Task> Filter::createTask(const PageInfo& pageInfo,

@@ -1,5 +1,6 @@
 set(CMAKE_AUTORCC ON)
 add_executable(scantailor-cli main.cpp BatchRunner.cpp BatchRunner.h
+    ProjectSession.cpp ProjectSession.h LegacyOptions.cpp
     "${SCANTAILOR_RESOURCES_DIR}/resources.qrc"
     "${SCANTAILOR_RESOURCES_DIR}/dark_scheme/dark_scheme.qrc"
     "${SCANTAILOR_RESOURCES_DIR}/light_scheme/light_scheme.qrc")

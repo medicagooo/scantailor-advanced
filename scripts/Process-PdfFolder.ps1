@@ -6,6 +6,7 @@ param(
     [string]$PythonExe,
     [ValidateRange(72, 1200)][int]$Dpi = 300,
     [ValidateRange(1, 16)][int]$Jobs = 1,
+    [ValidateSet('original', 'processed')][string]$PageSize = 'original',
     [string]$Config,
     [switch]$Resume,
     [switch]$Overwrite,
@@ -26,7 +27,7 @@ if (-not $PythonExe) {
     else { $PythonExe = (Get-Command python -ErrorAction Stop).Source }
 }
 $arguments = @((Join-Path $PSScriptRoot 'process_pdf_folder.py'), '--pdf-dir', $resolvedPdf,
-    '--cli', $cliExe, '--dpi', "$Dpi", '--jobs', "$Jobs")
+    '--cli', $cliExe, '--dpi', "$Dpi", '--jobs', "$Jobs", '--page-size', $PageSize)
 if ($OutputDir) { $arguments += @('--output-dir', $OutputDir) }
 if ($Config) { $arguments += @('--config', (Resolve-Path -LiteralPath $Config).Path) }
 if ($Resume) { $arguments += '--resume' }
