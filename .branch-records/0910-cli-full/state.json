@@ -13,7 +13,7 @@
     "docs/VERIFICATION.md"
   ],
   "status": "complete",
-  "next": "No implementation work remains. Use the CLI 2 portable package; integration/push is not authorized.",
+  "next": "Execute declared local master fast-forward and normal push; reconcile pending pointers against live refs before any retry. Implementation and local validation remain complete.",
   "integration": "unmerged",
   "purpose": "Complete CLI business coverage with shared GUI-compatible project settings",
   "requirements": [
@@ -22,9 +22,9 @@
   ],
   "constraints": [
     "Windows native PowerShell",
-    "No new push authorized",
     "Preserve GUI and existing v1 CLI behavior",
     "Explicit geometry coordinates and stable page identity",
-    "Keep source PDFs unchanged"
+    "Keep source PDFs unchanged",
+    "Normal push to origin/master authorized by req-push-master; no force push"
   ]
 }

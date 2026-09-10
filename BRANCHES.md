@@ -46,5 +46,8 @@
     }
   ],
   "format": 1,
-  "pending": []
+  "pending": [
+    "0910-cli-full/op-master-ff",
+    "0910-cli-full/op-push-master"
+  ]
 }
