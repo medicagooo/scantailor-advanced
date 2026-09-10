@@ -214,7 +214,7 @@ def console_child(path, cli):
             down, up = Record(), Record()
             for r in (down, up):
                 r.type = 2
-                r.event.mouse.pos.X, r.event.mouse.pos.Y = 5, 4
+                r.event.mouse.pos.X, r.event.mouse.pos.Y = 5, 5
             down.event.mouse.buttons = 1
             t = feed([down, up])
             report['mouse'] = c.choose('test', ['one', 'two']) == 1
@@ -232,7 +232,7 @@ def console_child(path, cli):
         api.GetConsoleMode(c.output, C.byref(om))
         report['restored'] = im.value == c.imode.value and om.value == c.omode.value
         child = subprocess.Popen([str(cli), 'menu', '--python', sys.executable, '--state-dir', str(path.parent / 'launcher')])
-        t = feed(sum((key(40) for _ in range(16)), []) + key(13, '\r'), delay=3)
+        t = feed(key(27, '\x1b'), delay=3)
         report['launcher'] = child.wait(timeout=20)
         t.join()
         model = Controller(cli, path.parent / 'cancel-menu')

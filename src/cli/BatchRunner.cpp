@@ -97,6 +97,14 @@ QJsonObject taskMetrics(const BackgroundTaskPtr& task) {
 std::set<PageId> selectedPages(const QString& expression, const ProjectPages& pages) {
   const auto sequence = pages.toPageSequence(PAGE_VIEW); std::set<PageId> result;
   if (expression.isEmpty() || expression == "all") return sequence.selectAll();
+  // Resolve the workbench sample after splitting, preserving original source
+  // identities, ordinal rules and whole-book layout dependencies.
+  if (expression == "sample") {
+    const auto count = sequence.numPages();
+    if (count) for (const auto index : {size_t(0), size_t((count - 1) / 2), size_t(count - 1)})
+      result.insert(sequence.pageAt(index).id());
+    return result;
+  }
   for (const auto& token : expression.split(',')) {
     if (token == "odd" || token == "even") {
       int i = 0; for (const auto& p : sequence) { ++i; if ((i % 2 == 1) == (token == "odd")) result.insert(p.id()); } continue;
@@ -234,6 +242,8 @@ int run(const QJsonObject& options) {
     struct Active { PageInfo page; BackgroundTaskPtr task; std::future<FilterResultPtr> result; };
     std::vector<Active> active;
     size_t next = 0;
+    size_t completed = 0;
+    emitEvent({{"event", "phase_started"}, {"stage", label}, {"total", int(work.size())}});
     const size_t jobs = size_t(options["jobs"].toInt(1));
     while (next < work.size() || !active.empty()) {
       while (!cancelled && next < work.size() && active.size() < jobs) {
@@ -274,6 +284,7 @@ int run(const QJsonObject& options) {
         }
         records[key] = record;
         auto event = record; event["event"] = "page_finished"; event["stage"] = label; event["key"] = key;
+        event["completed"] = int(++completed); event["total"] = int(work.size());
         emitEvent(event);
         it = active.erase(it);
         checkpoint();

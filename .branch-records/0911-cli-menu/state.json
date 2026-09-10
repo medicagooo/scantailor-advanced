@@ -10,7 +10,7 @@
     "Regression and real console interaction tests pass; review findings repaired",
     "Local and origin/master verified equal after authorized push"
   ],
-  "status": "active",
+  "status": "complete",
   "evidence": [
     "docs/MENU.md",
     "docs/VERIFICATION.md",
@@ -18,7 +18,7 @@
     "tests/cli_full_integration.py",
     "Local master verified at be3e774234234963e90be3e4af8115282b4009c7 after op-menu-merge"
   ],
-  "next": "Normal push refs/heads/master to origin refs/heads/master via op-menu-push after committing this predeclaration; verify local and remote SHAs and clean worktree. Pending pointer may remain until next ordinary registry update.",
+  "next": "Completed: origin/master verified at 76cc15aff379b95b49a9dac046be2f05ff6fd806 after op-menu-push; subsequent work is 0911-cli-workbench",
   "integration": "verified",
   "purpose": "Keyboard and mouse CLI menu covering the complete document processing workflow",
   "constraints": [

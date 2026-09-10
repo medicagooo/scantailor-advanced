@@ -1,0 +1,30 @@
+{
+  "purpose": "Redesign CLI as a polished Chinese terminal workbench with native clipboard and guided workflow",
+  "integration": "unmerged",
+  "constraints": [
+    "Preserve native CLI APIs and input documents",
+    "Windows native PowerShell; bundled Python stdlib console runtime",
+    "Explicit push master authorization; no force push or manual CI"
+  ],
+  "next": "Commit verified implementation and op-merge predeclaration; fast-forward local master, predeclare normal origin/master push, verify local/remote SHAs.",
+  "status": "active",
+  "acceptance": [
+    "Real clipboard and input tests pass including Chinese spaces quoted multiline paths",
+    "End-to-end file selection to processing and recovery remains valid",
+    "Responsive workbench rendered and inspected; review findings repaired",
+    "Local master equals verified origin/master after push"
+  ],
+  "requirements": [
+    "Implement approved home/input/settings/preview/progress redesign",
+    "Ctrl+V Shift+Insert right-click paste, Unicode quoted/multiline paths and normal text editing",
+    "Responsive dark/cyan layout, disabled action reasons, common vs advanced settings, readable progress/results",
+    "Independent review and repair, Windows console/Terminal validation, native build/package, normal push master"
+  ],
+  "evidence": [
+    "docs/MENU.md",
+    "docs/VERIFICATION.md",
+    "tests/workbench_integration.py",
+    "tests/menu_integration.py",
+    "tests/render_workbench.py"
+  ]
+}

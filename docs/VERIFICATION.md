@@ -146,3 +146,15 @@ the isolated embedded runtime omits it; the corrected invocation passed. This di
 
 Artifacts: `bin/ScanTailor-CLI-3.0-win64/` and `bin/ScanTailor-CLI-3.0-win64.zip`.
 CLI 1 and CLI 2 packages remain in place. The CLI 3 package includes MENU.md and its exact file manifest.
+
+## CLI 3.1 workbench redesign — 2026-09-11
+
+The long action list is replaced by a guided Chinese workbench with responsive layout, native clipboard text editing, common/advanced settings, sampled preview and readable progress. The native build and five CTest groups passed. All 20 full workflow regressions passed. Workbench tests cover editing/selection, quoted Unicode/multiline paths, recursive collection and output suggestions, enabled actions/hitboxes at 120/80/60 columns, review fixes, whole-project sampling, and keyboard paste-to-process execution. Existing eight menu tests remain applicable.
+
+Actual hidden classic-console and Windows Terminal runs read the native clipboard without modifying it and verified Ctrl+V routing. Known Chinese/multiline fixtures use an injected clipboard provider for deterministic Ctrl+V/Shift+Insert/right-click tests; terminal-injected text is tested separately. Both hosts verified visible workbench text through ReadConsoleOutputCharacterW. Evidence: `build-native/workbench-terminal-final.json`, `workbench-tests.log`, `workbench-menu-regression.log`. Visual layouts at 120x34, 80x25 and 60x22 were rendered and inspected under `build-native/workbench-visuals/`.
+
+An independent generic review agent (dedicated Bugbot unavailable) found three P2 issues: conflicting manual angle after mode switch, automatic margins overriding explicit margins, and preserve preset retaining report policy. All were fixed and covered by `test_common_mode_margins_and_scheme_review_fixes`.
+
+Real textbook sample preview: `build-native/workbench-real-preview/result.json`, complete; source SHA-256 unchanged at 1086c47c4e7cc13659b5545aaac0f933036f7c0dbb7653fd1721ebd7eea1841f. The local comparison HTML was generated. Automated browser navigation to its file URL was rejected by browser security policy; no browser workaround was used. HTML structure/data tests are separate from browser interaction, which is not claimed as verified.
+
+Final CLI 3.1 portable validation: 9 workbench tests, 8 menu regressions and 19 CLI/PDF workflow tests passed using packaged modules and embedded Python with only Windows system paths. GUI harness is not distributed and remains covered by the native 20-test run. Logs: `workbench-package-tests.log`, `workbench-package-menu.log`, `workbench-package-full.log`. Artifact: `bin/ScanTailor-CLI-3.1-win64/` and sibling ZIP; earlier packages are preserved. A temporary clipboard access-denied condition during browser automation cleared after that browser session ended; native clipboard tests then passed. Clipboard retry is bounded and never writes clipboard data.

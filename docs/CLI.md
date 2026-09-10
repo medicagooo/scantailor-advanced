@@ -3,7 +3,7 @@
 此 fork 增加 `scantailor-cli.exe`。GUI 仍为 `scantailor-advanced.exe`。
 CLI 复用 GUI 的六阶段图像处理任务，不执行 OCR、不调用云端模型。
 
-CLI 3 新增键盘 / 鼠标菜单：双击 `scantailor-cli.exe` 或运行 `scantailor-cli.exe menu`。
+CLI 3.1 提供中文终端工作台、地址粘贴和抽样预览：双击 `scantailor-cli.exe` 或运行 `scantailor-cli.exe menu`。
 菜单提供文件和输出目录选择、全部设置表单、项目编辑、预览、复核和恢复，详见 [MENU.md](MENU.md)。原有命令行接口保持兼容。
 
 ## PDF：推荐入口
@@ -190,7 +190,7 @@ CLI 2.0 保留上面的 v1 标量选项，新增 schema_version=2 配置。以�
 
 `analyze`、`preview`、`process` 均需专用 `--output`；六阶段顺序是 `orientation / split / deskew / content / layout / output`。
 `analyze` 默认止于 layout，`preview` 默认 output；process 也可用 `--through` 停在中间阶段。
-选页使用从 1 开始的当前逻辑页序号、`1-3,7`、`odd`、`even`、`all` 或稳定 ID，可用逗号合并。
+选页使用从 1 开始的当前逻辑页序号、`1-3,7`、`odd`、`even`、`all`、`sample`（首/中/尾逻辑页）或稳定 ID，可用逗号合并。
 为保证尺寸匹配正确，分析仍覆盖整本；仅生成所选页面的最终输出／阶段预览。
 未选输出标为 `not_selected`。阶段报告使用 schema 2；最终处理报告保留 schema 1 并增加字段。
 

@@ -3,10 +3,11 @@
   "records": {
     "0910-cli": ".branch-records/0910-cli/state.json",
     "0910-cli-full": ".branch-records/0910-cli-full/state.json",
-    "0911-cli-menu": ".branch-records/0911-cli-menu/state.json"
+    "0911-cli-menu": ".branch-records/0911-cli-menu/state.json",
+    "0911-cli-workbench": ".branch-records/0911-cli-workbench/state.json"
   },
   "active": [
-    "0911-cli-menu"
+    "0911-cli-workbench"
   ],
   "changes": [
     {
@@ -52,7 +53,7 @@
       "domain": "Scanning / interactive CLI",
       "date": "2026-09-11",
       "implementedAt": "2026-09-11T01:04:41.9034643+08:00",
-      "status": "integrated_local",
+      "status": "integrated",
       "evidence": [
         "docs/MENU.md",
         "tests/menu_integration.py",
@@ -67,10 +68,29 @@
       "request": "0911-cli-menu/req-menu-execute",
       "id": "cli-menu-001",
       "businessChange": "CLI 3 adds a keyboard/mouse console menu for exact PDF/image selections, output browsing, typed schema-2 settings and per-page rules, project/page edits, six-stage PDF/image previews, GUI geometry editing, review and immutable-snapshot recovery. Input changes clear old scopes; running tasks lock edits; cancellation waits for workers. Structural edits retain applied settings and rebase project paths. Existing command interfaces remain available."
+    },
+    {
+      "implementedAt": "2026-09-11T02:32:42.4770047+08:00",
+      "domain": "Scanning / interactive CLI",
+      "businessChange": "CLI 3.1 replaces the long menu with a responsive Chinese task workbench, native clipboard/selection/path editing, guided input/output, common and advanced settings, first/middle/last logical-page preview, local image comparison and readable stage progress. Text paste never launches actions. Mode/margin/preset changes clear conflicting settings. Existing CLI/project/recovery workflows retained.",
+      "deployedAt": null,
+      "id": "cli-workbench-001",
+      "request": "0911-cli-workbench/req-execute",
+      "status": "implemented_unmerged",
+      "evidence": [
+        "docs/MENU.md",
+        "docs/VERIFICATION.md",
+        "tests/workbench_integration.py",
+        "scripts/scantailor_menu/workbench.py",
+        "scripts/scantailor_menu/console.py",
+        "src/cli/BatchRunner.cpp"
+      ],
+      "integratedAt": null,
+      "date": "2026-09-11"
     }
   ],
   "format": 1,
   "pending": [
-    "0911-cli-menu/op-menu-push"
+    "0911-cli-workbench/op-merge"
   ]
 }

@@ -13,6 +13,7 @@ import signal
 import subprocess
 import threading
 import uuid
+import time
 
 
 def write_json(path, value):
@@ -81,6 +82,7 @@ class Controller:
         self.last = None
         self.lines = []
         self.lock = threading.Lock()
+        self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': 0}
 
     def query(self, args):
         result = subprocess.run([str(self.cli), *map(str, args)], capture_output=True, encoding='utf-8', errors='replace')
@@ -138,7 +140,7 @@ class Controller:
         write_json(manifest, {'schema_version': 1, 'files': self.inputs})
         return ['--manifest', str(manifest)]
 
-    def start(self, command='process', resume=False):
+    def start(self, command='process', resume=False, sample=False):
         if self.running:
             raise ValueError('A task is already running')
         if resume:
@@ -161,7 +163,7 @@ class Controller:
         write_json(config, self.config)
         output = Path(self.output).resolve() if command == 'process' else folder / command
         args = [str(self.cli), command, *self.source_args(folder), '--config', str(config), '--output', str(output),
-                '--jobs', str(self.options['jobs']), '--pages', self.options['pages'], '--review-policy', self.options['review_policy'],
+                '--jobs', str(self.options['jobs']), '--pages', 'sample' if sample else self.options['pages'], '--review-policy', self.options['review_policy'],
                 '--max-angle', str(self.options['max_angle']), '--min-page-ratio', str(self.options['min_page_ratio']), '--html']
         if self.kind != 'project':
             args += ['--dpi', str(self.options['dpi'])]
@@ -175,6 +177,8 @@ class Controller:
                     '--dpi', str(self.options['dpi']), '--jobs', str(self.options['jobs']), '--page-size', self.options['page_size'],
                     '--command', command, '--stage', self.options['stage'], '--review-policy', self.options['review_policy'],
                     '--max-angle', str(self.options['max_angle']), '--min-page-ratio', str(self.options['min_page_ratio'])]
+            if sample:
+                args += ['--sample']
         if command == 'process' and self.options['existing_output'] == 'overwrite':
             args += ['--overwrite']
         job = {'folder': str(folder), 'output': str(output), 'args': args, 'revision': self.revision,
@@ -189,6 +193,7 @@ class Controller:
                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         self.process, self.last, self.status = process, job, 'running'
         self.lines = []
+        self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': time.monotonic()}
         threading.Thread(target=self._read, args=(process, job), daemon=True).start()
 
     def _read(self, process, job):
@@ -199,7 +204,31 @@ class Controller:
                 with self.lock:
                     self.lines.append(line.rstrip())
                     del self.lines[:-200]
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        continue
+                    name = event.get('event', '')
+                    if name == 'phase_started':
+                        self.progress.update(done=0, total=event.get('total', 0), stage=event.get('stage', ''))
+                    elif name == 'pdf_started':
+                        self.progress.update(current=event.get('input', ''), done=0, total=0, stage='正在打开 PDF')
+                    elif name == 'page_rendered':
+                        self.progress.update(current=event.get('input', ''), done=event.get('page', 0), total=event.get('total', 0), stage='准备预览图片')
+                    elif name == 'page_started':
+                        self.progress.update(current=event.get('input', self.progress['current']))
+                    elif name in ('page_finished', 'page_reused'):
+                        self.progress['done'] = event.get('completed', self.progress['done'] + 1)
+                    elif name == 'processing':
+                        self.progress.update(stage='图像处理与布局分析', done=0, total=0)
         code = process.wait()
+        if code in (0, 1) and job['command'] == 'preview':
+            try:
+                from .preview import build_viewer
+                build_viewer(job['output'])
+            except (OSError, ValueError, KeyError) as error:
+                with self.lock:
+                    self.lines.append('预览对比页生成失败：' + str(error))
         state = 'cancelled' if code == 130 else {0: 'complete', 1: 'review / partial failure'}.get(code, 'failed')
         job.update(status=state, exit_code=code)
         write_json(Path(job['folder']) / 'job.json', job)

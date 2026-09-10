@@ -14,6 +14,10 @@ set_property(TARGET scantailor-cli APPEND PROPERTY LINK_DEPENDS
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/__init__.py"
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/model.py"
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/console.py"
+    "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/editing.py"
+    "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/rendering.py"
+    "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/workbench.py"
+    "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/preview.py"
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/ui.py")
 add_custom_command(TARGET scantailor-cli POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/scripts/menu.py" "$<TARGET_FILE_DIR:scantailor-cli>/menu.py"

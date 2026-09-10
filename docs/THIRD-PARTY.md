@@ -2,7 +2,7 @@
 
 This local build contains ScanTailor Advanced (GPL-3.0; root `LICENSE`) from
 `https://github.com/medicagooo/scantailor-advanced`, based on commit
-`02631a73be1dead864ac2961ed5a609c9b100b02`, plus the 0911-cli-menu branch's CLI 3 changes.
+`76cc15aff379b95b49a9dac046be2f05ff6fd806`, plus the 0911-cli-workbench branch's CLI 3.1 changes.
 
 Build inputs used on 2026-09-10 and 2026-09-11:
 

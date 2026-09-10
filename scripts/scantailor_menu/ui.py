@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 from .console import Console
 from .model import Controller, seed, validate, write_json
 
@@ -20,6 +21,35 @@ LABELS = {'defaults': '全局页面设置', 'project': '项目设置', 'rules': 
           'picture_zones': '图片区域', 'fill_zones': '填色区域', 'select': '作用范围', 'settings': '参数',
           'reading_direction': '阅读顺序', 'dpi': 'DPI', 'jobs': '并发数', 'pages': '输出页范围',
           'stage': '分析 / 预览阶段', 'page_size': 'PDF 页面尺寸', 'review_policy': '疑难页策略'}
+LABELS.update(dict(rotation='顺时针旋转（度）', trim='初裁切', enabled='启用', left='左边', right='右边', top='上边', bottom='下边',
+                  mode='处理模式', angle='纠偏角度（度）', oblique_mode='斜切模式', oblique_angle='斜切角度（度）',
+                  space='坐标空间', cutters='拆分线端点', page_mode='纸张框检测', content_mode='正文框检测', page_rect='纸张框 [横坐标,纵坐标,宽,高]',
+                  content_rect='正文框 [横坐标,纵坐标,宽,高]', basis='几何版本标识', fine_tune='精细调整', margins_mm='四边页边距（毫米）',
+                  match_size='统一页面尺寸', auto_margins='自动页边距', horizontal='水平对齐', vertical='垂直对齐',
+                  points='多边形顶点（像素）', color='填充颜色 #RRGGBB', layer='区域作用', category='区域来源',
+                  threshold_method='二值化算法', threshold='阈值调整', threshold_window='阈值窗口（像素）', despeckle='去斑点强度',
+                  dewarp='曲面展平', distortion_model='手动展平曲线', depth='展平深度', top_spline='上边界样条', bottom_spline='下边界样条',
+                  point='控制点坐标', tension='曲线张力', fill_color='边缘填充颜色', fill_margins='填充页边距', fill_offcut='填充裁切边缘',
+                  fill_outside_page='填充纸张外部', normalize_bw='黑白亮度归一', normalize_color='彩色亮度归一',
+                  black_on_white='黑字白底', morphological_smoothing='形态平滑', savitzky_golay='曲线平滑滤波',
+                  wiener_window='维纳滤波窗口', wiener_coefficient='维纳滤波系数', posterize='减少色阶', posterize_level='色阶数量',
+                  posterize_normalize='色阶亮度归一', posterize_force_bw='强制黑白色阶', color_segmentation='颜色分割',
+                  segment_noise='颜色分割降噪', segment_red='红色阈值', segment_green='绿色阈值', segment_blue='蓝色阈值',
+                  split_output='分别输出图层', foreground='前景模式', original_background='保留原始背景',
+                  picture_shape='图片检测形状', picture_sensitivity='图片检测灵敏度', picture_high_sensitivity='高灵敏度检测',
+                  sauvola_coefficient='Sauvola 系数', wolf_coefficient='Wolf 系数', wolf_lower='Wolf 灰度下限', wolf_upper='Wolf 灰度上限',
+                  post_deskew='输出后纠偏', post_deskew_angle='输出后纠偏角度', deskew_algorithm='纠偏依据',
+                  freeze_layout='冻结页面尺寸', frozen_size_mm='冻结尺寸（宽,高，毫米）', guides='布局辅助线', position='辅助线位置',
+                  page_detection_size_mm='预期纸张尺寸（毫米）', page_detection_tolerance='纸张检测容差', show_middle_rect='显示中间区域',
+                  images='源图序号', ids='逻辑页稳定标识', image_ids='源图稳定标识', parity='奇偶页', side='拆分位置',
+                  max_angle='疑难角度阈值（度）', min_page_ratio='最小保留面积比例', existing_output='已有结果处理方式'))
+VALUES = dict(auto='自动', off='关闭', manual='手动', single='不拆分', two='左右双页', cut='裁掉边缘页',
+              colorOrGray='保留颜色与灰度', bw='黑白', mixed='混合', source='源图坐标', oriented='旋转后的坐标',
+              deskew='纠偏后的坐标', ltr='从左到右', rtl='从右到左', preserve='保留原页并标记复核', report='生成结果并标记复核',
+              original='保留原始', processed='按处理后尺寸', reject='保留已有结果，不覆盖', overwrite='重新生成并覆盖此任务已有结果',
+              odd='奇数页', even='偶数页', left='左侧', right='右侧', center='居中', top='顶部', bottom='底部',
+              horizontal='水平', vertical='垂直', white='白色', black='黑色', background='背景', foreground='前景',
+              rectangular='矩形', free='自由形状', noop='不改变', picture='图片区域', marginal='边缘展平', color='彩色')
 IMAGE = {'.png', '.tif', '.tiff', '.jpg', '.jpeg', '.bmp'}
 
 
@@ -29,10 +59,12 @@ def label(key):
 
 def summary(value):
     if isinstance(value, dict):
-        return ', '.join(value) or '(沿用已有值)'
+        return '、'.join(label(k) for k in value) or '(沿用已有值)'
     if isinstance(value, list):
         return f'{len(value)} 项 ' + str(value)[:70]
-    return str(value)
+    if type(value) is bool:
+        return '开启' if value else '关闭'
+    return VALUES.get(value, str(value))
 
 
 class UI:
@@ -55,7 +87,7 @@ class UI:
                 continue
             rows = ['[确认当前目录]' if directory else f'[确认已选 {len(chosen)} 项，顺序为选择顺序]',
                     '[输入路径 / 跳转]', '[驱动器]', '[上一级]', '[新建文件夹]', '[选择本目录全部文件]', '[清空已选文件]']
-            rows += [('📁 ' if p.is_dir() else ('[x] ' if p in chosen else '[ ] ')) + p.name for p in entries]
+            rows += [('▸ ' if p.is_dir() else ('[✓] ' if p in chosen else '[ ] ')) + p.name for p in entries]
             index = self.c.choose(str(folder), rows, '文件单击/Space 勾选；目录单击进入；Esc 取消整个选择')
             if index is None:
                 return None
@@ -118,11 +150,11 @@ class UI:
         value = copy.deepcopy(original)
         if 'enum' in schema:
             options = schema['enum']
-            choice = self.c.choose(title, list(map(str, options)), 'Esc 放弃此字段')
+            choice = self.c.choose(title, [VALUES.get(v, str(v)) for v in options], 'Esc 放弃此字段')
             return (False, original) if choice is None else (True, options[choice])
         kind = schema['type']
         if kind == 'boolean':
-            choice = self.c.choose(title, ['true / 开启', 'false / 关闭'])
+            choice = self.c.choose(title, ['开启', '关闭'])
             return (False, original) if choice is None else (True, choice == 0)
         if kind in ('number', 'integer', 'string'):
             while True:
@@ -188,14 +220,55 @@ class UI:
                     value[key] = item
 
     def monitor(self):
-        def tick():
-            with self.m.lock:
-                lines = self.m.lines[-8:]
-            return ('任务: ' + self.m.status, ['[请求取消并等待]' if self.m.running else '[查看结果]', '[返回主菜单]'] + lines,
-                    '运行期间设置锁定；取消会等待处理进程退出并保存可用检查点')
+        from .workbench import STATES
+        from .rendering import Frame, ACCENT, MUTED
+        self.c.flush()
+        selected = 0
         while True:
-            choice = self.c.choose('', [], tick=tick)
-            if choice is None or choice == 1:
+            width, height = self.c.dimensions()
+            frame = Frame(width, height)
+            with self.m.lock:
+                progress = self.m.progress.copy()
+            done, total = progress['done'], progress['total']
+            percent = min(1, done / total) if total else 0
+            count = f'{done} / {total} 页' if total else '正在准备，请稍候'
+            seconds = max(0, int(time.monotonic() - progress['started'])) if progress['started'] else 0
+            frame.text(3, 1, STATES.get(self.m.status, self.m.status), ACCENT)
+            frame.text(3, 3, '任务使用固定配置；取消后等待检查点保存完成。', MUTED)
+            frame.rule(3, 4, width - 7)
+            frame.text(4, 6, label(progress['stage']) + '    ' + count)
+            bar_width = max(4, min(50, width - 10))
+            frame.text(4, 8, '━' * int(percent * bar_width) + '─' * (bar_width - int(percent * bar_width)), ACCENT)
+            frame.text(4, 10, '当前文件  ' + Path(progress['current']).name)
+            frame.text(4, 12, '输出位置  ' + (self.m.last or {}).get('output', ''), MUTED)
+            frame.text(4, 14, f'已用时间  {seconds // 60:02d}:{seconds % 60:02d}', MUTED)
+            labels = ['请求取消' if self.m.running else '查看结果', '返回工作台', '详细日志']
+            controls = [i for i in range(3) if i != 0 or self.m.status != 'cancelling']
+            if selected not in controls:
+                selected = controls[0]
+            frame.rule(3, height - 6, width - 7)
+            for i, title in enumerate(labels):
+                frame.button(3 + i * 17, height - 4, 16, title, i, selected == i, i in controls)
+            self.c.draw(frame)
+            event = self.c.read()
+            if not event:
+                continue
+            action, data = event
+            if action == 'escape':
+                return
+            choice = None
+            if action in ('tab', 'left', 'right', 'up', 'down'):
+                delta = -1 if action in ('up', 'left') or (action == 'tab' and data) else 1
+                selected = controls[(controls.index(selected) + delta) % len(controls)]
+            elif action == 'enter':
+                choice = selected
+            elif action in ('hover', 'click'):
+                hit = frame.hit(data)
+                if hit is not None:
+                    selected = hit
+                    if action == 'click':
+                        choice = hit
+            if choice == 1:
                 return
             if choice == 0:
                 if self.m.running:
@@ -203,19 +276,27 @@ class UI:
                 else:
                     self.results()
                     return
+            elif choice == 2:
+                with self.m.lock:
+                    logs = '\n'.join(self.m.lines)
+                self.message('详细日志', logs)
+                self.c.flush()
 
     def results(self):
+        from .workbench import STATES
         if not self.m.last:
             self.message('暂无任务', '先选择输入和输出，再运行任务')
             return
         root = Path(self.m.last['output'])
         while True:
-            rows = ['[打开结果目录]', '[查看任务日志]', '[打开生成的项目]', '[打开复核 / 预览报告]', '[恢复此任务快照]']
-            choice = self.c.choose('结果: ' + str(root), rows, self.m.last.get('status', 'unknown'))
+            viewer = root / 'preview.html'
+            rows = ['打开原图 / 结果对比' if viewer.exists() else '打开结果目录', '查看任务日志', '打开生成的项目', '打开复核 / 预览报告', '继续此任务（原始快照）']
+            status = self.m.last.get('status', 'unknown')
+            choice = self.c.choose(STATES.get(status, status), rows, str(root))
             if choice is None:
                 return
             if choice == 0:
-                os.startfile(root)
+                os.startfile(viewer if viewer.exists() else root)
             elif choice == 1:
                 self.message('任务日志', (Path(self.m.last['folder']) / 'events.log').read_text(encoding='utf-8')[-20000:])
             elif choice in (2, 3):
@@ -376,60 +457,8 @@ class UI:
             self.message('转换结果', json.dumps(mapped, indent=2, ensure_ascii=False))
 
     def run(self):
-        while True:
-            hint = f'输入 {self.m.kind or "未选择"} {len(self.m.inputs)} 项 | 输出 {self.m.output or "未选择"} | 状态 {self.m.status}'
-            rows = ['选择 PDF（单个 / 多个）', '选择图片（单个 / 多个）', '打开 .scan 项目', '选择输出目录',
-                    '参数设置（全局 / 按页规则 / 高级几何）', '运行选项（DPI / 并发 / 选页 / 阶段）',
-                    '项目与页面操作', '开始处理', '阶段分析', '阶段预览', '当前任务 / 取消', '任务结果 / 复核',
-                    '历史任务 / 恢复', '预设保存 / 载入', '环境诊断', '帮助', '退出']
-            choice = self.c.choose('ScanTailor CLI 3 · 键盘 / 鼠标菜单', rows, hint)
-            try:
-                if choice is None or choice == 16:
-                    if self.m.running:
-                        self.message('任务仍在运行', '请先请求取消并等待完成，再退出。')
-                        self.monitor()
-                    else:
-                        return 0
-                elif self.m.running and choice not in (10, 15):
-                    self.message('任务运行中', '设置和项目已锁定；可查看进度或请求取消。')
-                elif choice in (0, 1, 2):
-                    files = self.browse([{'.pdf'}, IMAGE, {'.scan'}][choice], multi=choice != 2)
-                    if files:
-                        self.m.select(['pdf', 'images', 'project'][choice], files)
-                elif choice == 3:
-                    folders = self.browse(directory=True)
-                    if folders:
-                        self.m.invalidate()
-                        self.m.output = str(folders[0])
-                elif choice == 4:
-                    ok, config = self.edit('处理配置草稿', self.m.schema, self.m.config)
-                    if ok:
-                        self.m.apply(config)
-                elif choice == 5:
-                    self.options()
-                elif choice == 6:
-                    self.project()
-                elif choice in (7, 8, 9):
-                    self.m.start(['process', 'analyze', 'preview'][choice - 7])
-                    self.monitor()
-                elif choice == 10:
-                    self.monitor()
-                elif choice == 11:
-                    self.results()
-                elif choice == 12:
-                    jobs = self.m.history()
-                    index = self.c.choose('历史任务', [f'{j.get("status")} | {j.get("command")} | {j.get("output")}' for j in jobs])
-                    if index is not None:
-                        self.m.last = jobs[index]
-                        self.results()
-                elif choice == 13:
-                    self.presets()
-                elif choice == 14:
-                    self.message('环境诊断', json.dumps(self.m.query(['doctor']), ensure_ascii=False, indent=2))
-                elif choice == 15:
-                    self.message('帮助', '方向键 / Tab 移动，Enter / 单击执行，Esc 放弃当前表单。\n多文件按勾选顺序处理；文件浏览器可手输路径。\n设置先在草稿中修改，应用后生效。\n几何单位：像素；margins_mm / frozen_size_mm：毫米。\n先分析并打开生成项目，再编辑该页内容框。\nPDF 先处理并从结果打开 .scan，再预览和逐页修正。\n输出需专用目录；已有任务从历史恢复。\nWindows 系统快捷键由终端控制。详细说明见 MENU.md。')
-            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
-                self.message('操作未完成', error)
+        from .workbench import Workbench
+        return Workbench(self).run()
 
     def options(self):
         props = {'dpi': {'type': 'integer', 'minimum': 72, 'maximum': 1200}, 'jobs': {'type': 'integer', 'minimum': 1, 'maximum': 16},

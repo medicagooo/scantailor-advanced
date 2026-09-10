@@ -85,13 +85,15 @@ def run_cli(command: list[str], log: Path) -> int:
     # Inherit the console so Ctrl+C reaches the CLI's cancellation handler.
     # stdout goes to JSONL on disk, avoiding pipe buffering deadlocks.
     with log.open("w", encoding="utf-8") as stream:
-        process = subprocess.Popen(command, stdout=stream)
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, encoding="utf-8", errors="replace")
         try:
-            while True:
-                try:
-                    return process.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    emit("processing", log=str(log))
+            # Stream native progress to the workbench while retaining JSONL.
+            with process.stdout:
+                for line in process.stdout:
+                    stream.write(line)
+                    stream.flush()
+                    print(line, end="", flush=True)
+            return process.wait()
         except KeyboardInterrupt:
             # Allow the native process to checkpoint after the console event.
             # Ctrl+Break reaches both this wrapper and the native worker in
@@ -193,6 +195,8 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
                 command += ["--" + key.replace("_", "-"), str(getattr(args, key))]
         if args.command != "process":
             command += ["--stage" if args.command == "preview" else "--through", args.stage, "--html"]
+        if args.sample:
+            command += ["--pages", "sample"]
         if args.config:
             command += ["--config", str(args.config)]
         if (processed / "state.json").exists():
@@ -309,7 +313,10 @@ def main() -> int:
     parser.add_argument("--review-policy", choices=("preserve", "report"))
     parser.add_argument("--max-angle", type=float)
     parser.add_argument("--min-page-ratio", type=float)
+    parser.add_argument("--sample", action="store_true", help="Preview first, middle and last logical pages")
     args = parser.parse_args()
+    if args.sample and args.command != "preview":
+        parser.error("--sample only applies to preview")
     args.cli = args.cli.resolve()
     if not args.cli.is_file(): parser.error("CLI executable must exist")
     explicit_files = None
