@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import signal
 import sys
 import time
 
@@ -26,7 +27,15 @@ for _stream in (sys.stdout, sys.stderr):
 import pymupdf
 from PIL import Image
 
-VERSION = 2
+VERSION = 3
+
+
+def request_cancel(signum, frame):
+    raise KeyboardInterrupt
+
+
+if hasattr(signal, "SIGBREAK"):
+    signal.signal(signal.SIGBREAK, request_cancel)
 
 
 def emit(event: str, **fields) -> None:
@@ -85,11 +94,9 @@ def run_cli(command: list[str], log: Path) -> int:
                     emit("processing", log=str(log))
         except KeyboardInterrupt:
             # Allow the native process to checkpoint after the console event.
-            try:
-                process.wait(timeout=30)
-            except subprocess.TimeoutExpired:
-                process.terminate()
-                process.wait()
+            # Ctrl+Break reaches both this wrapper and the native worker in
+            # the same console process group. Do not kill a checkpoint write.
+            process.wait()
             raise
 
 
@@ -130,11 +137,13 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
     previous = load_json(state_path)
     signature = {"version": VERSION, "source": str(source), "source_sha256": sha256(source),
                  "cli_sha256": sha256(args.cli), "dpi": args.dpi, "page_size": args.page_size, "config_sha256": config_hash,
-                 "wrapper_sha256": sha256(Path(__file__)), "pymupdf_version": pymupdf.VersionBind}
+                 "wrapper_sha256": sha256(Path(__file__)), "pymupdf_version": pymupdf.VersionBind,
+                 "command": args.command, "stage": args.stage, "review_policy": args.review_policy,
+                 "max_angle": args.max_angle, "min_page_ratio": args.min_page_ratio}
     fingerprint = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()
-    if destination.exists() and not (args.overwrite or (args.resume and previous.get("destination") == str(destination))):
+    if args.command == "process" and destination.exists() and not (args.overwrite or (args.resume and previous.get("destination") == str(destination))):
         raise RuntimeError(f"Output exists: {destination}; use --resume or --overwrite")
-    if (args.resume and previous.get("fingerprint") == fingerprint and previous.get("status") == "complete"
+    if (args.command == "process" and args.resume and previous.get("fingerprint") == fingerprint and previous.get("status") == "complete"
             and destination.exists() and previous.get("output_sha256") == sha256(destination)):
         emit("pdf_reused", input=str(source), output=str(destination))
         return previous["result"]
@@ -177,8 +186,13 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
             {"path": str(images / f"{i+1:05d}.png"),
              "stable_id": hashlib.sha256(f"{source_hash}:{i+1}".encode()).hexdigest()}
             for i in range(original.page_count)]})
-        command = [str(args.cli), "process", "--manifest", str(manifest), "--output", str(processed),
+        command = [str(args.cli), args.command, "--manifest", str(manifest), "--output", str(processed),
                    "--dpi", str(args.dpi), "--jobs", str(args.jobs)]
+        for key in ("review_policy", "max_angle", "min_page_ratio"):
+            if getattr(args, key) is not None:
+                command += ["--" + key.replace("_", "-"), str(getattr(args, key))]
+        if args.command != "process":
+            command += ["--stage" if args.command == "preview" else "--through", args.stage, "--html"]
         if args.config:
             command += ["--config", str(args.config)]
         if (processed / "state.json").exists():
@@ -188,6 +202,9 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
             raise KeyboardInterrupt
         if code not in (0, 1):
             raise RuntimeError(f"CLI failed with code {code}; see {generation / 'events.jsonl'}")
+        if args.command != "process":
+            return {"input": str(source), "output": str(processed), "review_pages": int(code == 1),
+                    "project": str(processed / "project.scan"), "command": args.command}
         native = load_json(processed / "report.json")
         if native.get("schema_version") not in (1, 2):
             raise RuntimeError("Missing or incompatible CLI report")
@@ -275,7 +292,9 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pdf-dir", type=Path, required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--pdf-dir", type=Path)
+    inputs.add_argument("--pdf-manifest", type=Path, help="schema_version=1, files: ordered PDF paths")
     parser.add_argument("--cli", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--config", type=Path)
@@ -285,16 +304,41 @@ def main() -> int:
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--recursive", action="store_true")
+    parser.add_argument("--command", choices=("process", "analyze", "preview"), default="process")
+    parser.add_argument("--stage", choices=("orientation", "split", "deskew", "content", "layout", "output"), default="output")
+    parser.add_argument("--review-policy", choices=("preserve", "report"))
+    parser.add_argument("--max-angle", type=float)
+    parser.add_argument("--min-page-ratio", type=float)
     args = parser.parse_args()
-    args.pdf_dir = args.pdf_dir.resolve()
     args.cli = args.cli.resolve()
-    if not args.pdf_dir.is_dir() or not args.cli.is_file():
-        parser.error("PDF directory and CLI executable must exist")
+    if not args.cli.is_file(): parser.error("CLI executable must exist")
+    explicit_files = None
+    if args.pdf_dir:
+        args.pdf_dir = args.pdf_dir.resolve()
+        if not args.pdf_dir.is_dir(): parser.error("PDF directory must exist")
+    else:
+        manifest_path = args.pdf_manifest.resolve()
+        manifest = load_json(manifest_path)
+        if set(manifest) != {"schema_version", "files"} or manifest["schema_version"] != 1 or not isinstance(manifest["files"], list) or not manifest["files"]:
+            parser.error("PDF manifest requires schema_version=1 and a nonempty files array")
+        explicit_files = []
+        for value in manifest["files"]:
+            if not isinstance(value, str) or not value: parser.error("Manifest paths must be nonempty strings")
+            path = (manifest_path.parent / value).resolve()
+            if not path.is_file() or path.suffix.lower() != ".pdf": parser.error(f"Not a readable PDF path: {path}")
+            if path in explicit_files: parser.error(f"Duplicate PDF path: {path}")
+            explicit_files.append(path)
     if not 72 <= args.dpi <= 1200 or not 1 <= args.jobs <= 16:
         parser.error("DPI must be 72..1200; jobs must be 1..16")
-    root = (args.output_dir or args.pdf_dir / "scantailor-output").resolve()
-    if root == args.pdf_dir or args.pdf_dir.is_relative_to(root):
+    if ((args.max_angle is not None and not 0 <= args.max_angle <= 45)
+            or (args.min_page_ratio is not None and not .1 <= args.min_page_ratio <= 1)):
+        parser.error("Review thresholds must be 0..45 degrees and 0.1..1 area ratio")
+    default_parent = args.pdf_dir if args.pdf_dir else explicit_files[0].parent
+    root = (args.output_dir or default_parent / "scantailor-output").resolve()
+    if args.pdf_dir and (root == args.pdf_dir or args.pdf_dir.is_relative_to(root)):
         parser.error("Output must not be the input directory or its ancestor")
+    if explicit_files and any(p.is_relative_to(root) for p in explicit_files):
+        parser.error("Output must not contain an input PDF")
     root.mkdir(parents=True, exist_ok=True)
     config_hash = ""
     if args.config:
@@ -306,9 +350,13 @@ def main() -> int:
         if reserved.intersection(config):
             parser.error("PDF config must not override paths, dpi, jobs or resume/overwrite")
         config_hash = sha256(args.config)
-    candidates = args.pdf_dir.rglob("*") if args.recursive else args.pdf_dir.iterdir()
-    files = sorted((p for p in candidates if p.is_file() and p.suffix.lower() == ".pdf"
-                    and not p.resolve().is_relative_to(root)), key=lambda p: p.as_posix().casefold())
+    if explicit_files is not None:
+        if args.recursive: parser.error("--recursive only applies to --pdf-dir")
+        files = explicit_files
+    else:
+        candidates = args.pdf_dir.rglob("*") if args.recursive else args.pdf_dir.iterdir()
+        files = sorted((p for p in candidates if p.is_file() and p.suffix.lower() == ".pdf"
+                        and not p.resolve().is_relative_to(root)), key=lambda p: p.as_posix().casefold())
     if not files:
         parser.error("No input PDFs found")
     results, failures = [], []
@@ -316,7 +364,10 @@ def main() -> int:
         for source in files:
             emit("pdf_started", input=str(source))
             try:
-                results.append(process_pdf(source, source.relative_to(args.pdf_dir), root, args, config_hash))
+                # Explicit selections have stable per-source subdirectories, so
+                # equal file names and changing selections cannot collide.
+                relative = source.relative_to(args.pdf_dir) if args.pdf_dir else Path(hashlib.sha256(str(source).casefold().encode()).hexdigest()[:12]) / source.name
+                results.append(process_pdf(source, relative, root, args, config_hash))
             except KeyboardInterrupt:
                 emit("cancelled", output_dir=str(root))
                 return 130

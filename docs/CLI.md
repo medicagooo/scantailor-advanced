@@ -3,6 +3,9 @@
 此 fork 增加 `scantailor-cli.exe`。GUI 仍为 `scantailor-advanced.exe`。
 CLI 复用 GUI 的六阶段图像处理任务，不执行 OCR、不调用云端模型。
 
+CLI 3 新增键盘 / 鼠标菜单：双击 `scantailor-cli.exe` 或运行 `scantailor-cli.exe menu`。
+菜单提供文件和输出目录选择、全部设置表单、项目编辑、预览、复核和恢复，详见 [MENU.md](MENU.md)。原有命令行接口保持兼容。
+
 ## PDF：推荐入口
 
 在便携包目录打开 PowerShell 7：

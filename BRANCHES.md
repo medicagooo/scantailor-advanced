@@ -2,9 +2,12 @@
   "read": "Task state contains effective requirements; events contain operation intent.",
   "records": {
     "0910-cli": ".branch-records/0910-cli/state.json",
-    "0910-cli-full": ".branch-records/0910-cli-full/state.json"
+    "0910-cli-full": ".branch-records/0910-cli-full/state.json",
+    "0911-cli-menu": ".branch-records/0911-cli-menu/state.json"
   },
-  "active": [],
+  "active": [
+    "0911-cli-menu"
+  ],
   "changes": [
     {
       "status": "integrated",
@@ -28,7 +31,7 @@
       "id": "cli-full-001",
       "date": "2026-09-10",
       "businessChange": "CLI 2 adds project and page editing, stable IDs, all six-stage settings, manual geometry/zones/curves, staged previews, coordinate conversion, selected output, layered artifact verification and split-aware PDF assembly. GUI and v1 paths are retained. Source-level rules cannot target one split half; uncertain PDF spreads preserve the original once. Local review fixes cover final preview geometry and stale aggregate sizes.",
-      "status": "implemented_local_unmerged",
+      "status": "integrated",
       "request": "0910-cli-full/req-full-01",
       "evidence": [
         "docs/CLI-COVERAGE.md",
@@ -37,17 +40,37 @@
         "src/cli/BatchRunner.cpp",
         "scripts/process_pdf_folder.py",
         "tests/cli_full_integration.py",
-        "docs/VERIFICATION.md"
+        "docs/VERIFICATION.md",
+        ".branch-records/0910-cli-full/events.jsonl"
       ],
       "domain": "Scanning / project automation and PDF processing",
       "implementedAt": "2026-09-11T00:22:43.7795375+08:00",
-      "integratedAt": null,
+      "integratedAt": "2026-09-11",
       "deployedAt": null
+    },
+    {
+      "domain": "Scanning / interactive CLI",
+      "date": "2026-09-11",
+      "implementedAt": "2026-09-11T01:04:41.9034643+08:00",
+      "status": "implemented_unmerged",
+      "evidence": [
+        "docs/MENU.md",
+        "tests/menu_integration.py",
+        "scripts/scantailor_menu/model.py",
+        "scripts/scantailor_menu/console.py",
+        "scripts/scantailor_menu/ui.py",
+        "src/cli/MenuLauncher.cpp",
+        "docs/VERIFICATION.md"
+      ],
+      "integratedAt": null,
+      "deployedAt": null,
+      "request": "0911-cli-menu/req-menu-execute",
+      "id": "cli-menu-001",
+      "businessChange": "CLI 3 adds a keyboard/mouse console menu for exact PDF/image selections, output browsing, typed schema-2 settings and per-page rules, project/page edits, six-stage PDF/image previews, GUI geometry editing, review and immutable-snapshot recovery. Input changes clear old scopes; running tasks lock edits; cancellation waits for workers. Structural edits retain applied settings and rebase project paths. Existing command interfaces remain available."
     }
   ],
   "format": 1,
   "pending": [
-    "0910-cli-full/op-master-ff",
-    "0910-cli-full/op-push-master"
+    "0911-cli-menu/op-menu-merge"
   ]
 }

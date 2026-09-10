@@ -114,6 +114,35 @@ character-level proof of fidelity; inspect review reports and difficult pages.
 
 Implementation and local validation are complete. Use the new portable package's
 `Process-PdfFolder.ps1`, or the project/config/geometry commands in `docs/CLI.md`.
-Any later integration/push requires its own explicit request and predeclared Git
-operation. Old GUIs may discard new optional metadata on resave; use this package's
+CLI 2 was subsequently pushed to origin/master at 02631a73be1dead864ac2961ed5a609c9b100b02 on 2026-09-11 under an explicit request.
+Old GUIs may discard new optional metadata on resave; use this package's
 GUI for stable IDs, custom spline tensions and frozen dimensions.
+
+## CLI 3 menu validation — 2026-09-11
+
+Windows native Qt 6.8.3 / MinGW 13.1 offline build passed, including 5 CTest groups.
+All 20 complete CLI workflow tests passed, retaining v1 command contracts and the actual GUI roundtrip harness.
+Eight menu tests passed: schema bounds and source scope; draft copies and source invalidation; process/resume/preview snapshots;
+exact PDF selections with colliding names; preservation of settings through structural edits; GUI project path rebasing;
+cancellation/completion synchronization; console sanitization and real Win32 input records.
+
+The hidden classic-console test injects actual keyboard and mouse INPUT_RECORD values, validates numeric text input,
+release-event draining and console mode restoration, and launches/exits the native `menu` command.
+This is automated Win32 console evidence, not a manual Windows Terminal interaction test.
+
+Independent review via a generic review subagent (dedicated Bugbot service unavailable) found four P2 issues:
+GUI relative paths, applied configuration loss on page edits, dropped release events and cancellation status races.
+All four were repaired and covered by the menu regressions. No further review invocation was required.
+
+Reproducible evidence: `tests/menu_integration.py`, `docs/MENU.md`, and the build/package scripts.
+Local logs: `build-native/menu-build.log`, `menu-tests.log`, `menu-full-tests.log`.
+
+Portable validation uses the packaged menu modules and embedded Python with only Windows system directories in PATH.
+All 8 menu tests passed, including real Ctrl+Break cancellation and completion; 19 CLI/PDF workflow tests passed
+(the non-distributed GUI harness is intentionally skipped there; its test passed in the native 20-test run).
+Evidence: `build-native/menu-package-tests.log`, `menu-package-full.log`, `menu-package.log`.
+The first embedded-Python full-suite invocation needed the tests directory explicitly added to sys.path because
+the isolated embedded runtime omits it; the corrected invocation passed. This did not require changing application code.
+
+Artifacts: `bin/ScanTailor-CLI-3.0-win64/` and `bin/ScanTailor-CLI-3.0-win64.zip`.
+CLI 1 and CLI 2 packages remain in place. The CLI 3 package includes MENU.md and its exact file manifest.

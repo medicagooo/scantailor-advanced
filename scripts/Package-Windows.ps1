@@ -58,12 +58,14 @@ try {
 New-Item -ItemType Directory -Path (Join-Path $packagePath 'translations') | Out-Null
 Get-ChildItem -LiteralPath $buildPath -Filter 'scantailor-advanced_*.qm' |
     ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $packagePath 'translations') }
-foreach ($name in @('Process-PdfFolder.ps1', 'process_pdf_folder.py', 'requirements-pdf.txt', 'physics-safe.json')) {
+foreach ($name in @('Process-PdfFolder.ps1', 'process_pdf_folder.py', 'requirements-pdf.txt', 'physics-safe.json', 'menu.py')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $packagePath
 }
 Copy-Item -LiteralPath (Join-Path $sourceDir 'LICENSE') -Destination $packagePath
 Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/CLI.md') -Destination (Join-Path $packagePath 'README-CLI.md')
 Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/CLI-COVERAGE.md') -Destination $packagePath
+Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/MENU.md') -Destination $packagePath
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'scantailor_menu') -Destination $packagePath -Recurse
 Copy-Item -LiteralPath (Join-Path $sourceDir 'docs/THIRD-PARTY.md') -Destination $packagePath
 if ($PythonEmbedZip -or $PythonPackagesRoot) {
     if (-not ($PythonEmbedZip -and $PythonPackagesRoot)) { throw 'Supply both PythonEmbedZip and PythonPackagesRoot.' }

@@ -1,6 +1,7 @@
 // Copyright (C) 2026. Distributed under the GNU GPLv3 license.
 #include "BatchRunner.h"
 #include "ProjectSession.h"
+#include "MenuLauncher.h"
 #include <core/Application.h>
 #include <core/ColorSchemeFactory.h>
 #include <core/ColorSchemeManager.h>
@@ -43,9 +44,12 @@ int main(int argc, char** argv) {
   qputenv("QT_QPA_PLATFORM", "offscreen");
   QTemporaryDir settingsDir;
   Application app(argc, argv, false);
+  const auto entryArgs = app.arguments();
+  if ((entryArgs.size() == 1 && cli::interactiveConsole()) || entryArgs.value(1) == "menu")
+    return cli::launchMenu(entryArgs.mid(2));
   QCoreApplication::setApplicationName("scantailor-cli");
   QCoreApplication::setOrganizationName("ScanTailorCLI");
-  QCoreApplication::setApplicationVersion("2.0.0");
+  QCoreApplication::setApplicationVersion("3.0.0");
   QSettings::setDefaultFormat(QSettings::IniFormat);
   QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
   QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, settingsDir.path());
@@ -58,7 +62,7 @@ int main(int argc, char** argv) {
   parser.setApplicationDescription("Unattended ScanTailor image processing. JSONL events on stdout; diagnostics on stderr.");
   parser.addHelpOption();
   parser.addVersionOption();
-  parser.addPositionalArgument("command", "process, analyze, preview, review, project create/inspect/apply/edit, pages list, config schema/export, geometry map, capabilities, doctor");
+  parser.addPositionalArgument("command", "menu, process, analyze, preview, review, project create/inspect/apply/edit, pages list, config schema/export, geometry map, capabilities, doctor");
   const QStringList paths = {"input", "output", "project", "save-project", "config", "manifest", "save", "operations", "geometry"};
   for (const auto& name : paths) parser.addOption({name, name + " path", "path"});
   const QStringList strings = {"preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp", "through", "stage", "pages", "review-policy"};
@@ -75,19 +79,19 @@ int main(int argc, char** argv) {
   try {
     if (!parser.parse(app.arguments())) fail(parser.errorText());
     if (parser.isSet("help")) { std::fputs(parser.helpText().toUtf8().constData(), stdout); return 0; }
-    if (parser.isSet("version")) { std::puts("scantailor-cli 2.0.0"); return 0; }
+    if (parser.isSet("version")) { std::puts("scantailor-cli 3.0.0"); return 0; }
     const QString command = parser.positionalArguments().join(' ');
     if (QStringList{"config schema", "capabilities", "doctor"}.contains(command))
       for (const auto& key : parser.optionNames()) if (key != "json") fail("Option --" + key + " does not apply to " + command);
     if (command == "config schema") { cli::emitEvent(processing::schema()); return 0; }
     if (command == "capabilities") {
-      cli::emitEvent({{"schema_version", 2}, {"commands", QJsonArray{"doctor", "capabilities", "config schema", "config export", "project create", "project inspect", "project apply", "project edit", "pages list", "geometry map", "analyze", "preview", "process", "review"}},
+      cli::emitEvent({{"schema_version", 2}, {"commands", QJsonArray{"menu", "doctor", "capabilities", "config schema", "config export", "project create", "project inspect", "project apply", "project edit", "pages list", "geometry map", "analyze", "preview", "process", "review"}},
         {"stages", QJsonArray{"orientation", "split", "deskew", "content", "layout", "output"}}, {"configuration", processing::schema()}}); return 0;
     }
     if (command == "doctor") {
       QStringList formats;
       for (const auto& f : QImageReader::supportedImageFormats()) formats << QString::fromLatin1(f);
-      cli::emitEvent({{"event", "doctor"}, {"cli_version", "2.0.0"}, {"qt_version", qVersion()},
+      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.0.0"}, {"qt_version", qVersion()},
                       {"platform", "offscreen"}, {"qt_image_formats", formats.join(",")},
                       {"core_image_formats", "png,jpeg,tiff"}, {"status", "ok"}});
       return 0;

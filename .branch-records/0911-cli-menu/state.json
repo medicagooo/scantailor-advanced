@@ -1,0 +1,29 @@
+{
+  "requirements": [
+    "Execute the approved menu plan P0-P4: inputs/output browsing, all business settings and project/page operations, preview/geometry, execution/recovery/review",
+    "Enforce state and scope logic, draft/apply, stale previews and geometry, input whitelist, shared keyboard/mouse actions",
+    "Review, repair, native Windows build/tests and normal push to origin/master"
+  ],
+  "acceptance": [
+    "Full keyboard and mouse menu workflow with invalid-input suppression",
+    "All existing business capabilities reachable through menus, with typed forms instead of mandatory raw JSON",
+    "Regression and real console interaction tests pass; review findings repaired",
+    "Local and origin/master verified equal after authorized push"
+  ],
+  "status": "active",
+  "evidence": [
+    "docs/MENU.md",
+    "docs/VERIFICATION.md",
+    "tests/menu_integration.py",
+    "tests/cli_full_integration.py"
+  ],
+  "next": "Commit verified CLI 3 implementation and registry; fast-forward master via op-menu-merge; predeclare and commit normal origin/master push, then verify local/cloud SHAs.",
+  "integration": "unmerged",
+  "purpose": "Keyboard and mouse CLI menu covering the complete document processing workflow",
+  "constraints": [
+    "Windows native PowerShell; retain existing script CLI contracts",
+    "Preserve source files and settings; no shell-built worker commands",
+    "User explicitly authorized normal push to master; no force push or manual workflow operations",
+    "Controller uses bundled Python standard library and Win32 input records; native processing APIs remain the validation and processing authority."
+  ]
+}
