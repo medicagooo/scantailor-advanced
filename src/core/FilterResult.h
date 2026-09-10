@@ -5,6 +5,7 @@
 #define SCANTAILOR_CORE_FILTERRESULT_H_
 
 #include <memory>
+#include <QString>
 
 class AbstractFilter;
 class FilterUiInterface;
@@ -12,6 +13,10 @@ class FilterUiInterface;
 class FilterResult {
  public:
   virtual ~FilterResult() = default;
+
+  // Headless callers must inspect errors without invoking updateUI(). Existing
+  // GUI result rendering remains unchanged.
+  virtual QString errorString() const { return {}; }
 
   virtual void updateUI(FilterUiInterface* ui) = 0;
 

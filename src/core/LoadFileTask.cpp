@@ -28,6 +28,8 @@ class LoadFileTask::ErrorResult : public FilterResult {
  public:
   explicit ErrorResult(const QString& filePath);
 
+  QString errorString() const override { return QStringLiteral("Cannot read image: ") + m_filePath; }
+
   void updateUI(FilterUiInterface* ui) override;
 
   std::shared_ptr<AbstractFilter> filter() override { return nullptr; }

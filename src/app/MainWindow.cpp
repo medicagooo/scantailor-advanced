@@ -1,3 +1,4 @@
+#include "core/CompositeTaskFactory.h"
 // Copyright (C) 2019  Joseph Artsimovich <joseph.artsimovich@gmail.com>, 4lex4 <4lex49@zoho.com>
 // Use of this source code is governed by the GNU GPLv3 license that can be found in the LICENSE file.
 
@@ -2060,45 +2061,9 @@ BackgroundTaskPtr MainWindow::createCompositeTask(const PageInfo& page,
                                                   const int lastFilterIdx,
                                                   const bool batch,
                                                   bool debug) {
-  std::shared_ptr<fix_orientation::Task> fixOrientationTask;
-  std::shared_ptr<page_split::Task> pageSplitTask;
-  std::shared_ptr<deskew::Task> deskewTask;
-  std::shared_ptr<select_content::Task> selectContentTask;
-  std::shared_ptr<page_layout::Task> pageLayoutTask;
-  std::shared_ptr<output::Task> outputTask;
-
-  if (batch) {
-    debug = false;
-  }
-
-  if (lastFilterIdx >= m_stages->outputFilterIdx()) {
-    outputTask = m_stages->outputFilter()->createTask(page.id(), m_thumbnailCache, m_outFileNameGen, batch, debug);
-    debug = false;
-  }
-  if (lastFilterIdx >= m_stages->pageLayoutFilterIdx()) {
-    pageLayoutTask = m_stages->pageLayoutFilter()->createTask(page.id(), outputTask, batch, debug);
-    debug = false;
-  }
-  if (lastFilterIdx >= m_stages->selectContentFilterIdx()) {
-    selectContentTask = m_stages->selectContentFilter()->createTask(page.id(), pageLayoutTask, batch, debug);
-    debug = false;
-  }
-  if (lastFilterIdx >= m_stages->deskewFilterIdx()) {
-    deskewTask = m_stages->deskewFilter()->createTask(page.id(), selectContentTask, batch, debug);
-    debug = false;
-  }
-  if (lastFilterIdx >= m_stages->pageSplitFilterIdx()) {
-    pageSplitTask = m_stages->pageSplitFilter()->createTask(page, deskewTask, batch, debug);
-    debug = false;
-  }
-  if (lastFilterIdx >= m_stages->fixOrientationFilterIdx()) {
-    fixOrientationTask = m_stages->fixOrientationFilter()->createTask(page.id(), pageSplitTask, batch);
-    debug = false;
-  }
-  assert(fixOrientationTask);
-  return std::make_shared<LoadFileTask>(batch ? BackgroundTask::BATCH : BackgroundTask::INTERACTIVE, page,
-                                        m_thumbnailCache, m_pages, fixOrientationTask);
-}  // MainWindow::createCompositeTask
+  return createCompositeProcessingTask(m_stages, m_pages, m_thumbnailCache,
+                                       m_outFileNameGen, page, lastFilterIdx, batch, debug);
+}
 
 std::shared_ptr<CompositeCacheDrivenTask> MainWindow::createCompositeCacheDrivenTask(const int lastFilterIdx) {
   std::shared_ptr<fix_orientation::CacheDrivenTask> fixOrientationTask;

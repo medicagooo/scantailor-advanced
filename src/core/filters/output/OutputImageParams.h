@@ -4,7 +4,7 @@
 #ifndef SCANTAILOR_OUTPUT_OUTPUTIMAGEPARAMS_H_
 #define SCANTAILOR_OUTPUT_OUTPUTIMAGEPARAMS_H_
 
-#include <DistortionModel.h>
+#include <dewarping/DistortionModel.h>
 #include <ImageTransformation.h>
 
 #include <QRect>

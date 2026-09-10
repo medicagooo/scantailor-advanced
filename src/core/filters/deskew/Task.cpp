@@ -156,6 +156,9 @@ FilterResultPtr Task::process(const TaskStatus& status, FilterData data) {
       const Skew skew(m_settings->algoContentBased() ? skewFinder.findSkew(rotatedImage)
                                                      : skewFinder.findSkewFromTopEdge(rotatedImage));
 
+      status.reportMetric("skew_confidence", skew.confidence());
+      status.reportMetric("skew_confidence_required", Skew::GOOD_CONFIDENCE);
+
       if (skew.confidence() >= Skew::GOOD_CONFIDENCE) {
         uiData.setEffectiveDeskewAngle(-skew.angle());
       } else {
@@ -210,6 +213,8 @@ FilterResultPtr Task::process(const TaskStatus& status, FilterData data) {
   ImageTransformation newXform(data.xform());
   newXform.setPostRotation(uiData.effectiveDeskewAngle());
   newXform.setPostOblique(uiData.effectiveObliqueAngle());
+
+  status.reportMetric("deskew_angle", uiData.effectiveDeskewAngle());
 
   if (m_nextTask) {
     return m_nextTask->process(status, FilterData(data, newXform));

@@ -1,5 +1,8 @@
 # ScanTailor Advanced
 
+This fork includes a headless CLI and a Windows PDF folder processing script.
+See [CLI and PDF usage](docs/CLI.md) for the portable package, safe scanning preset, and build instructions.
+
 The ScanTailor version that merges the features of the `ScanTailor Featured` and `ScanTailor Enhanced` versions,
 brings new ones and fixes.  
 

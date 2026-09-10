@@ -39,6 +39,10 @@ class Filter : public AbstractFilter {
 
   ~Filter() override;
 
+  // Batch configuration uses the same settings as the GUI. Mutate only between
+  // processing stages, while no worker tasks are running.
+  const std::shared_ptr<Settings>& processingSettings() const { return m_settings; }
+
   QString getName() const override;
 
   PageView getView() const override;

@@ -164,6 +164,12 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data) 
 
   status.throwIfCancelled();
 
+  const QRectF fullRect = data.xform().resultingRect();
+  if (fullRect.width() > 0 && fullRect.height() > 0) {
+    status.reportMetric("page_retained_ratio", newParams.pageRect().width() * newParams.pageRect().height()
+                        / (fullRect.width() * fullRect.height()));
+  }
+
   if (m_nextTask) {
     return m_nextTask->process(status, FilterData(data, data.xform()), uiData.pageRect(), uiData.contentRect());
   } else {

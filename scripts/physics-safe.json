@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "preset": "physics-safe",
+  "deskew": "auto",
+  "page-detection": "auto",
+  "content-detection": "off",
+  "color-mode": "color-grayscale",
+  "dewarp": "off",
+  "fill-margins": true,
+  "fill-offcut": true,
+  "max-angle": 8,
+  "min-page-ratio": 0.8
+}

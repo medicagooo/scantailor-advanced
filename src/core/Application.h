@@ -11,7 +11,7 @@
 class Application : public QApplication {
   Q_OBJECT
  public:
-  Application(int& argc, char** argv);
+  Application(int& argc, char** argv, bool interactive = true);
 
   bool notify(QObject* receiver, QEvent* e) override;
 
@@ -33,6 +33,7 @@ class Application : public QApplication {
   void loadFonts();
 
   QTranslator m_translator;
+  bool m_interactive;
   QString m_currentLocale;
   std::map<QString, QString> m_translationsMap;
   QString m_portableConfigPath;

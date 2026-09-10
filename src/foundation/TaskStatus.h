@@ -13,6 +13,10 @@ class TaskStatus {
   virtual bool isCancelled() const = 0;
 
   virtual void throwIfCancelled() const = 0;
+
+  // Optional numeric evidence for unattended processing. GUI status objects
+  // may ignore this; no change to the underlying image algorithms is implied.
+  virtual void reportMetric(const char*, double) const {}
 };
 
 

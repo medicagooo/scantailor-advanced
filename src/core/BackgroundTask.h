@@ -7,6 +7,8 @@
 #include <QAtomicInt>
 #include <exception>
 #include <memory>
+#include <map>
+#include <string>
 
 #include "AbstractCommand.h"
 #include "FilterResult.h"
@@ -47,8 +49,13 @@ class BackgroundTask : public AbstractCommand<FilterResultPtr>, public TaskStatu
    */
   void throwIfCancelled() const override;
 
+  void reportMetric(const char* name, double value) const override { m_metrics[name] = value; }
+  const std::map<std::string, double>& metrics() const { return m_metrics; }
+
  private:
   QAtomicInt m_cancelFlag;
+  // Written only by this task's worker; read after the worker has joined.
+  mutable std::map<std::string, double> m_metrics;
   const Type m_type;
 };
 

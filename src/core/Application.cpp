@@ -9,12 +9,15 @@
 #include <QDirIterator>
 #include <QFontDatabase>
 #include <QTemporaryDir>
+#include <cstdio>
+#include <cstdlib>
 
 #include "OutOfMemoryHandler.h"
 
-Application::Application(int& argc, char** argv) : QApplication(argc, argv), m_currentLocale("en") {
+Application::Application(int& argc, char** argv, bool interactive)
+    : QApplication(argc, argv), m_interactive(interactive), m_currentLocale("en") {
   initTranslations();
-  initPortableVersion();
+  if (interactive) initPortableVersion();
   loadFonts();
 }
 
@@ -22,6 +25,12 @@ bool Application::notify(QObject* receiver, QEvent* e) {
   try {
     return QApplication::notify(receiver, e);
   } catch (const std::bad_alloc&) {
+    // CLI cannot recover through the GUI memory dialog. Its persisted checkpoint
+    // remains available for --resume, including after an allocation failure.
+    if (!m_interactive) {
+      std::fputs("Out of memory in Qt event dispatch; resume from the last checkpoint.\n", stderr);
+      std::_Exit(3);
+    }
     OutOfMemoryHandler::instance().handleOutOfMemorySituation();
     return false;
   }

@@ -4,7 +4,7 @@
 #ifndef SCANTAILOR_OUTPUT_SETTINGS_H_
 #define SCANTAILOR_OUTPUT_SETTINGS_H_
 
-#include <DistortionModel.h>
+#include <dewarping/DistortionModel.h>
 
 #include <QMutex>
 #include <memory>

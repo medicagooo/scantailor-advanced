@@ -48,7 +48,10 @@ static bool fuzzyCompare(const QImage& img1, const QImage& img2) {
 
 static bool checkScale(const GrayImage& img, const QSize& newSize) {
   const GrayImage scaled1(scaleToGray(img, newSize));
-  const GrayImage scaled2(img.toQImage().scaled(newSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+  // Use a true-color reference: Qt's indexed-image scaling path can quantize
+  // the palette, which is not the grayscale area interpolation tested here.
+  const GrayImage scaled2(img.toQImage().convertToFormat(QImage::Format_RGB32)
+                             .scaled(newSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
   return fuzzyCompare(scaled1, scaled2);
 }
 

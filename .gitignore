@@ -158,3 +158,5 @@ local.cmake
 *.bak
 *.cache
 .cache/
+__pycache__/
+*.pyc

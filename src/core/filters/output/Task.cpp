@@ -60,9 +60,11 @@ class Task::UiUpdater : public FilterResult {
             const DespeckleState& despeckleState,
             const DespeckleVisualization& despeckleVisualization,
             bool batch,
-            bool debug);
+            bool debug,
+            const QString& error);
 
   void updateUI(FilterUiInterface* ui) override;
+  QString errorString() const override { return m_error; }
 
   std::shared_ptr<AbstractFilter> filter() override { return m_filter; }
 
@@ -83,6 +85,7 @@ class Task::UiUpdater : public FilterResult {
   DespeckleVisualization m_despeckleVisualization;
   bool m_batchProcessing;
   bool m_debug;
+  QString m_error;
 };
 
 
@@ -112,6 +115,7 @@ Task::~Task() = default;
 FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, const QPolygonF& contentRectPhys) {
   status.throwIfCancelled();
 
+  QString outputError;
   Params params = m_settings->getParams(m_pageId);
 
   RenderParams renderParams(params.colorParams(), params.splittingOptions());
@@ -405,6 +409,7 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, 
     }
 
     if (invalidateParams) {
+      outputError = QStringLiteral("Failed to write output or auxiliary image: ") + outFilePath;
       m_settings->removeOutputParams(m_pageId);
     } else {
       // Note that we can't reuse *_file_info objects
@@ -436,7 +441,7 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, 
   }
   return std::make_shared<UiUpdater>(m_filter, m_settings, std::move(m_dbg), params, newXform,
                                      generator.outputContentRect(), m_pageId, data.origImage(), outImg, automaskImg,
-                                     despeckleState, despeckleVisualization, m_batchProcessing, m_debug);
+                                     despeckleState, despeckleVisualization, m_batchProcessing, m_debug, outputError);
 }  // Task::process
 
 /**
@@ -470,7 +475,7 @@ Task::UiUpdater::UiUpdater(std::shared_ptr<Filter> filter,
                            const DespeckleState& despeckleState,
                            const DespeckleVisualization& despeckleVisualization,
                            const bool batch,
-                           const bool debug)
+                           const bool debug, const QString& error)
     : m_filter(std::move(filter)),
       m_settings(std::move(settings)),
       m_dbg(std::move(dbgImg)),
@@ -486,7 +491,7 @@ Task::UiUpdater::UiUpdater(std::shared_ptr<Filter> filter,
       m_despeckleState(despeckleState),
       m_despeckleVisualization(despeckleVisualization),
       m_batchProcessing(batch),
-      m_debug(debug) {}
+      m_debug(debug), m_error(error) {}
 
 void Task::UiUpdater::updateUI(FilterUiInterface* ui) {
   // This function is executed from the GUI thread.
