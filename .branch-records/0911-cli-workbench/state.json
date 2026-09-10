@@ -1,12 +1,12 @@
 {
   "purpose": "Redesign CLI as a polished Chinese terminal workbench with native clipboard and guided workflow",
-  "integration": "unmerged",
+  "integration": "verified",
   "constraints": [
     "Preserve native CLI APIs and input documents",
     "Windows native PowerShell; bundled Python stdlib console runtime",
     "Explicit push master authorization; no force push or manual CI"
   ],
-  "next": "Commit verified implementation and op-merge predeclaration; fast-forward local master, predeclare normal origin/master push, verify local/remote SHAs.",
+  "next": "Push committed local master to origin/master via op-push; verify remote/local SHAs. Pending pointer may remain until next ordinary registry update.",
   "status": "active",
   "acceptance": [
     "Real clipboard and input tests pass including Chinese spaces quoted multiline paths",
@@ -25,6 +25,7 @@
     "docs/VERIFICATION.md",
     "tests/workbench_integration.py",
     "tests/menu_integration.py",
-    "tests/render_workbench.py"
+    "tests/render_workbench.py",
+    "Local master verified at 89885258c89732a5d361dc58ff16709a18f48419 after op-merge"
   ]
 }

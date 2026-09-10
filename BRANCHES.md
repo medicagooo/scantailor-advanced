@@ -76,7 +76,7 @@
       "deployedAt": null,
       "id": "cli-workbench-001",
       "request": "0911-cli-workbench/req-execute",
-      "status": "implemented_unmerged",
+      "status": "integrated_local",
       "evidence": [
         "docs/MENU.md",
         "docs/VERIFICATION.md",
@@ -85,12 +85,12 @@
         "scripts/scantailor_menu/console.py",
         "src/cli/BatchRunner.cpp"
       ],
-      "integratedAt": null,
+      "integratedAt": "2026-09-11T02:33:31.9180568+08:00",
       "date": "2026-09-11"
     }
   ],
   "format": 1,
   "pending": [
-    "0911-cli-workbench/op-merge"
+    "0911-cli-workbench/op-push"
   ]
 }
