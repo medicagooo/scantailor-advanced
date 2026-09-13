@@ -1,5 +1,6 @@
 // Copyright (C) 2026. Distributed under the GNU GPLv3 license.
 #include "ProcessingConfiguration.h"
+#include "ImageEncoding.h"
 #include "StageSequence.h"
 #include "ProjectPages.h"
 #include "PageSequence.h"
@@ -200,7 +201,7 @@ void noteOrigins(const QJsonObject& patch, const QString& prefix, const QString&
 QJsonObject schema() {
   const auto selector = record({{"pages", array(number(1, 1000000, true), 1)}, {"images", array(number(1, 1000000, true), 1)}, {"ids", array(text(), 1)}, {"image_ids", array(text(), 1)}, {"parity", choice("odd|even")}, {"side", choice("single|left|right")}});
   const auto project = record({{"reading_direction", choice("ltr|rtl")}, {"deskew_algorithm", choice("content|top-edge")}, {"page_detection_size_mm", array(number(0, 10000), 2, 2)}, {"page_detection_tolerance", number(0, 1)}, {"freeze_layout", boolean()}, {"frozen_size_mm", array(number(0.001, 10000), 2, 2)}, {"show_middle_rect", boolean()}, {"guides", array(record({{"orientation", choice("horizontal|vertical")}, {"position", number(-1000000, 1000000)}}, {"orientation", "position"}))}});
-  auto result = record({{"schema_version", number(2, 2, true)}, {"preset", choice("physics-safe")}, {"project", project}, {"defaults", settingsSchema()}, {"rules", array(record({{"select", selector}, {"settings", settingsSchema()}}, {"select", "settings"}))}}, {"schema_version"});
+  auto result = record({{"image_encoding", record({{"format", choice("png|tiff|jpeg")}, {"png_compression", number(0,9,true)}, {"tiff_compression", choice("none|lzw|deflate")}, {"jpeg_quality", number(1,100,true)}})}, {"schema_version", number(2, 2, true)}, {"preset", choice("physics-safe")}, {"project", project}, {"defaults", settingsSchema()}, {"rules", array(record({{"select", selector}, {"settings", settingsSchema()}}, {"select", "settings"}))}}, {"schema_version"});
   result["$schema"] = "https://json-schema.org/draft/2020-12/schema";
   result["title"] = "ScanTailor processing configuration v2";
   return result;
@@ -239,6 +240,7 @@ void validateSettings(const QJsonObject& settings) {
 }
 void validateConfiguration(const QJsonObject& config) {
   validateValue(config, schema(), "config");
+  ImageEncoding::fromJson(config["image_encoding"].toObject());
   validateSettings(config["defaults"].toObject());
   for (const auto& rule : config["rules"].toArray()) {
     const auto r = rule.toObject(), selector = r["select"].toObject(), settings = r["settings"].toObject();

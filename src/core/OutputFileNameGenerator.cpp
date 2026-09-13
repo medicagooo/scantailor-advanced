@@ -43,7 +43,7 @@ QString OutputFileNameGenerator::fileNameFor(const PageId& page) const {
     name += QLatin1Char(ltr == (subPage == PageId::LEFT_PAGE) ? '1' : '2');
     name += QLatin1Char(subPage == PageId::LEFT_PAGE ? 'L' : 'R');
   }
-  name += QString::fromLatin1(".tif");
+  name += m_encoding.suffix();
   return name;
 }
 

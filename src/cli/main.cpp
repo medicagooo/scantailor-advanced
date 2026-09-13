@@ -2,6 +2,7 @@
 #include "BatchRunner.h"
 #include "ProjectSession.h"
 #include "MenuLauncher.h"
+#include <core/ImageEncoding.h>
 #include <core/Application.h>
 #include <core/ColorSchemeFactory.h>
 #include <core/ColorSchemeManager.h>
@@ -49,7 +50,7 @@ int main(int argc, char** argv) {
     return cli::launchMenu(entryArgs.mid(2));
   QCoreApplication::setApplicationName("scantailor-cli");
   QCoreApplication::setOrganizationName("ScanTailorCLI");
-  QCoreApplication::setApplicationVersion("3.1.0");
+  QCoreApplication::setApplicationVersion("3.2.0");
   QSettings::setDefaultFormat(QSettings::IniFormat);
   QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
   QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, settingsDir.path());
@@ -65,9 +66,9 @@ int main(int argc, char** argv) {
   parser.addPositionalArgument("command", "menu, process, analyze, preview, review, project create/inspect/apply/edit, pages list, config schema/export, geometry map, capabilities, doctor");
   const QStringList paths = {"input", "output", "project", "save-project", "config", "manifest", "save", "operations", "geometry"};
   for (const auto& name : paths) parser.addOption({name, name + " path", "path"});
-  const QStringList strings = {"preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp", "through", "stage", "pages", "review-policy"};
+  const QStringList strings = {"image-format", "tiff-compression", "preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp", "through", "stage", "pages", "review-policy"};
   for (const auto& name : strings) parser.addOption({name, name + " setting (see docs/CLI.md)", "value"});
-  const QStringList numbers = {"dpi", "output-dpi", "rotate", "deskew-angle", "margin-mm", "jobs", "max-angle", "min-page-ratio"};
+  const QStringList numbers = {"png-compression", "jpeg-quality", "dpi", "output-dpi", "rotate", "deskew-angle", "margin-mm", "jobs", "max-angle", "min-page-ratio"};
   for (const auto& name : numbers) parser.addOption({name, name + " numeric value", "number"});
   const QStringList booleans = {"fill-margins", "fill-offcut"};
   for (const auto& name : booleans) parser.addOption({name, name + " true or false", "boolean"});
@@ -79,7 +80,7 @@ int main(int argc, char** argv) {
   try {
     if (!parser.parse(app.arguments())) fail(parser.errorText());
     if (parser.isSet("help")) { std::fputs(parser.helpText().toUtf8().constData(), stdout); return 0; }
-    if (parser.isSet("version")) { std::puts("scantailor-cli 3.1.0"); return 0; }
+    if (parser.isSet("version")) { std::puts("scantailor-cli 3.2.0"); return 0; }
     const QString command = parser.positionalArguments().join(' ');
     if (QStringList{"config schema", "capabilities", "doctor"}.contains(command))
       for (const auto& key : parser.optionNames()) if (key != "json") fail("Option --" + key + " does not apply to " + command);
@@ -91,7 +92,7 @@ int main(int argc, char** argv) {
     if (command == "doctor") {
       QStringList formats;
       for (const auto& f : QImageReader::supportedImageFormats()) formats << QString::fromLatin1(f);
-      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.1.0"}, {"qt_version", qVersion()},
+      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.2.0"}, {"qt_version", qVersion()},
                       {"platform", "offscreen"}, {"qt_image_formats", formats.join(",")},
                       {"core_image_formats", "png,jpeg,tiff"}, {"status", "ok"}});
       return 0;
@@ -113,6 +114,13 @@ int main(int argc, char** argv) {
         if (options.take("schema_version") != 1) fail("Configuration schema_version must be 1 or 2.");
       }
     }
+    const QStringList encodingFlags{"image-format", "png-compression", "tiff-compression", "jpeg-quality"};
+    auto configuredEncoding = configuration.value("image_encoding").toObject();
+    // Schema 1 configuration and explicit flags must remain distinct so a
+    // format override drops only inherited (not explicit) codec parameters.
+    for (const auto& key : encodingFlags) if (options.contains(key))
+      configuredEncoding[key == "image-format" ? "format" : QString(key).replace('-', '_')] = options.take(key);
+    ImageEncoding::fromJson(configuredEncoding);
     QStringList allowed = paths + strings + numbers + booleans + QStringList{"resume", "overwrite"};
     allowed.removeAll("config");
     for (const auto& key : options.keys()) if (!allowed.contains(key)) fail("Unknown configuration key: " + key);
@@ -179,6 +187,13 @@ int main(int argc, char** argv) {
     choice("through", {"orientation", "split", "deskew", "content", "layout", "output"});
     choice("stage", {"orientation", "split", "deskew", "content", "layout", "output"});
     choice("review-policy", {"preserve", "report"});
+    for (const auto& key : encodingFlags) onlyFor(key, {"process", "analyze", "preview"});
+    if (command == "process" || command == "analyze" || command == "preview") {
+      auto encoding = configuredEncoding;
+      if (options.contains("image-format") && options["image-format"] != encoding.value("format").toString("png")) encoding = {};
+      for (const auto& key : encodingFlags) if (options.contains(key)) encoding[key == "image-format" ? "format" : QString(key).replace('-', '_')] = options.take(key);
+      options["image_encoding"] = ImageEncoding::fromJson(encoding).json();
+    }
     options["command"] = command;
     if (parser.isSet("config")) options["_config_path"] = cli::absolutePath(parser.value("config"));
     if (!configuration.isEmpty()) options["configuration"] = configuration;

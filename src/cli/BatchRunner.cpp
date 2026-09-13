@@ -16,6 +16,7 @@
 #include <core/TiffWriter.h>
 #include <core/filters/output/Settings.h>
 #include <core/filters/output/Utils.h>
+#include <core/filters/output/RenderParams.h>
 #include <core/filters/select_content/Settings.h>
 #include <core/filters/page_layout/Settings.h>
 #include <core/filters/page_layout/Params.h>
@@ -30,6 +31,7 @@
 #include <QJsonDocument>
 #include <QLockFile>
 #include <QSaveFile>
+#include <QSet>
 #include <QThread>
 #include <QUrl>
 #include <QRegularExpression>
@@ -124,9 +126,10 @@ std::set<PageId> selectedPages(const QString& expression, const ProjectPages& pa
 }
 QJsonArray outputArtifacts(const QString& main, const output::Params& params) {
   QStringList paths{main}; const QFileInfo info(main); const auto root = info.absolutePath();
-  if (params.splittingOptions().isSplitOutput()) {
+  const output::RenderParams render(params.colorParams(), params.splittingOptions());
+  if (render.splitOutput()) {
     paths << QDir(output::Utils::foregroundDir(root)).filePath(info.fileName()) << QDir(output::Utils::backgroundDir(root)).filePath(info.fileName());
-    if (params.splittingOptions().isOriginalBackgroundEnabled()) paths << QDir(output::Utils::originalBackgroundDir(root)).filePath(info.fileName());
+    if (render.originalBackground()) paths << QDir(output::Utils::originalBackgroundDir(root)).filePath(info.fileName());
   }
   QJsonArray result;
   for (const auto& p : paths) {
@@ -221,7 +224,9 @@ int run(const QJsonObject& options) {
   if (options["resume"].toBool() && !prior.isEmpty() && !reuse)
     emitEvent({{"event", "invalidated"}, {"reason", "Input, configuration or executable changed; recomputing whole-project layout."}});
 
-  const auto names = session.names(outputDir);
+  auto names = session.names(outputDir);
+  const auto encoding = ImageEncoding::fromJson(options["image_encoding"].toObject());
+  names.setImageEncoding(encoding);
   auto thumbs = std::make_shared<ThumbnailPixmapCache>(outputDir + "/cache/thumbs", QSize(200, 200), 2, 100);
   // LoadFileTask and output filters expect a cache root even in unattended mode.
   require(QDir().mkpath(outputDir + "/cache"), "Cannot create cache.");
@@ -229,8 +234,26 @@ int run(const QJsonObject& options) {
 
   QJsonObject records;
   const auto priorRecords = prior["pages"].toObject();
+  // Remember verified writes across codec generations. Reverting PNG->TIFF->PNG
+  // must recognize this job's retained PNG without claiming unrelated files.
+  QSet<QString> ownedOutputs;
+  for (const auto& item : prior["owned_outputs"].toArray()) ownedOutputs.insert(item.toString());
+  auto remember = [&](const QJsonObject& entries) {
+    for (const auto& value : entries) {
+      const auto record = value.toObject();
+      if (!record["sha256"].toString().isEmpty()) ownedOutputs.insert(record["output"].toString());
+      for (const auto& artifact : record["artifacts"].toArray())
+        if (!artifact.toObject()["sha256"].toString().isEmpty()) ownedOutputs.insert(artifact.toObject()["path"].toString());
+    }
+  };
+  remember(priorRecords);
   QJsonObject state{{"schema_version", 1}, {"fingerprint", fingerprint}, {"project", projectPath}, {"inputs", inputHashes}, {"pages", records}};
-  auto checkpoint = [&] { state["pages"] = records; writeJson(statePath, state); };
+  auto checkpoint = [&] {
+    remember(records); QJsonArray owned;
+    auto paths = ownedOutputs.values(); std::sort(paths.begin(), paths.end());
+    for (const auto& path : paths) owned.append(path);
+    state["owned_outputs"] = owned; state["pages"] = records; writeJson(statePath, state);
+  };
   auto saveProject = [&] {
     session.save(projectPath, outputDir, true);
   };
@@ -300,7 +323,7 @@ int run(const QJsonObject& options) {
     const auto path = names.filePathFor(page.id());
     const auto key = pageKey(page);
     if (QFileInfo::exists(path)) {
-      bool owned = priorRecords.contains(key) && priorRecords[key].toObject()["output"].toString() == path;
+      bool owned = ownedOutputs.contains(path);
       require(options["overwrite"].toBool() || (options["resume"].toBool() && owned), "Output already exists: " + path);
     }
     records[key] = QJsonObject{{"input", page.imageId().filePath()}, {"output", path}, {"status", "pending"}};
@@ -321,7 +344,7 @@ int run(const QJsonObject& options) {
         records[key] = record;
       }
       if (QFileInfo::exists(path)) {
-        const bool owned = priorRecords.contains(key) && priorRecords[key].toObject()["output"].toString() == path;
+        const bool owned = ownedOutputs.contains(path);
         require(options["overwrite"].toBool() || (options["resume"].toBool() && owned), "Output already exists: " + path);
       }
       if (session.newProject || session.config.contains("preset") || options.contains("preset")) {
@@ -365,6 +388,14 @@ int run(const QJsonObject& options) {
     emitEvent({{"event", "finished"}, {"stage", through}, {"report", reportPath}, {"exit_code", errors ? 1 : 0}}); return errors ? 1 : 0;
   }
   session.applyConfiguration(processing::Scope::Logical, {"output", "picture_zones", "fill_zones"});
+  // Layer exports can contain transparency; JPEG cannot represent that contract.
+  if (encoding.format == "jpeg") for (const auto& page : pages->toPageSequence(PAGE_VIEW))
+  {
+    if (!selected.count(page.id())) continue;
+    const auto params = stages->outputFilter()->processingSettings()->getParams(page.id());
+    if (output::RenderParams(params.colorParams(), params.splittingOptions()).splitOutput())
+      throw std::invalid_argument("JPEG cannot encode split-output layers; choose PNG or TIFF, or disable split_output.");
+  }
   std::vector<PageInfo> outputWork;
   std::set<PageId> failed;
   for (const auto& page : pages->toPageSequence(PAGE_VIEW)) {
@@ -384,7 +415,7 @@ int run(const QJsonObject& options) {
       warnings << "large_page_crop";
     const auto previous = priorRecords[key].toObject();
     const QString outPath = names.filePathFor(page.id());
-    if (reuse && (previous["status"] == "complete" || previous["status"] == "review") && QFileInfo::exists(outPath)
+    if (reuse && (previous["status"] == "complete" || previous["status"] == "review") && QFileInfo::exists(previous["output"].toString())
         && verifiedArtifacts(previous)) {
       record = previous; records[key] = record;
       emitEvent({{"event", "page_reused"}, {"key", key}, {"output", outPath}});
@@ -398,8 +429,14 @@ int run(const QJsonObject& options) {
         auto image = ImageLoader::load(page.imageId());
         image.setDotsPerMeterX(qRound(page.metadata().dpi().horizontal() / 0.0254));
         image.setDotsPerMeterY(qRound(page.metadata().dpi().vertical() / 0.0254));
-        if (!image.isNull() && TiffWriter::writeImage(outPath, image)) {
-          record["status"] = "review"; record["fallback_original"] = true; record["sha256"] = hashFile(outPath);
+        // Preserve-policy recovery must be lossless even when JPEG was requested.
+        auto fallbackEncoding = encoding.format == "jpeg" ? ImageEncoding::fromJson({}) : encoding;
+        const auto fallbackPath = encoding.format == "jpeg" ? QFileInfo(outPath).path() + "/" + QFileInfo(outPath).completeBaseName() + "-preserved.png" : outPath;
+        require(!QFileInfo::exists(fallbackPath) || options["overwrite"].toBool() ||
+                (options["resume"].toBool() && ownedOutputs.contains(fallbackPath)), "Unowned fallback output exists: " + fallbackPath);
+        record["output"] = fallbackPath; record["image_encoding"] = fallbackEncoding.json();
+        if (!image.isNull() && fallbackEncoding.write(fallbackPath, image)) {
+          record["status"] = "review"; record["fallback_original"] = true; record["sha256"] = hashFile(fallbackPath);
         } else { record["status"] = "error"; record["message"] = "Failed to preserve original page"; }
       } else { record["status"] = "error"; record["message"] = "Uncertain split page requires GUI review"; }
       records[key] = record;
@@ -424,6 +461,7 @@ int run(const QJsonObject& options) {
   for (const auto& page : analyze) {
     auto record = records[pageKey(page)].toObject();
     record["id"] = processing::pageId(*pages, page); record["settings"] = processing::inspect(*stages, page);
+    if (!record.contains("image_encoding")) record["image_encoding"] = encoding.json();
     if (record["status"] == "complete" && record["review_required"].toBool()) record["status"] = "review";
     if (makePreview && (record["status"] == "complete" || record["status"] == "review")) {
       const auto previewDir = outputDir + "/previews"; require(QDir().mkpath(previewDir),"Cannot create preview directory");

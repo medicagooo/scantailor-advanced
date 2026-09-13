@@ -33,3 +33,14 @@
 `console.py` 管理原生剪贴板、输入事件和焦点；`editing.py` 处理文本选区与路径解析；`rendering.py` 管理单元格布局、颜色和命中区域；`workbench.py` 编排首页和常用设置；`ui.py` 保留高级/项目适配；`model.py` 固定任务快照、进度和取消；`preview.py` 生成本地对比页面。原生 `BatchRunner.cpp::selectedPages` 在拆页后解析 sample，实际处理仍由共享六阶段执行。
 
 测试入口：`tests/workbench_integration.py`、`tests/menu_integration.py`、`tests/cli_full_integration.py`。`tests/render_workbench.py` 从实际布局模型输出 PNG，供宽窄窗口视觉检查。
+
+
+## 中间图片设置（CLI 3.2）
+
+从「处理方案 → 自定义常用设置 → 中间图片格式与压缩」进入。
+PNG 默认等级 6，可输入 0–9；TIFF 可选无压缩/LZW/Deflate；JPEG 可输入质量 1–100。
+只展示当前格式的选项，JPEG 显示有损与透明分层限制。子页「应用」保存到常用设置草稿，
+再选择外层「应用设置」才影响任务；任一级取消均不改变已有任务设置。
+「全部设置」也能编辑 `image_encoding`；不属于当前格式的压缩字段会被校验拒绝。
+保存或载入设置文件会包含编码参数；任务执行使用固定设置快照，修改后需重新生成预览。
+编码规则与回退例外见 [CLI.md](CLI.md#cli-32中间页面图片的格式与压缩)。

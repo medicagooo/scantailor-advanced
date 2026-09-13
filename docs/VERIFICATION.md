@@ -158,3 +158,20 @@ An independent generic review agent (dedicated Bugbot unavailable) found three P
 Real textbook sample preview: `build-native/workbench-real-preview/result.json`, complete; source SHA-256 unchanged at 1086c47c4e7cc13659b5545aaac0f933036f7c0dbb7653fd1721ebd7eea1841f. The local comparison HTML was generated. Automated browser navigation to its file URL was rejected by browser security policy; no browser workaround was used. HTML structure/data tests are separate from browser interaction, which is not claimed as verified.
 
 Final CLI 3.1 portable validation: 9 workbench tests, 8 menu regressions and 19 CLI/PDF workflow tests passed using packaged modules and embedded Python with only Windows system paths. GUI harness is not distributed and remains covered by the native 20-test run. Logs: `workbench-package-tests.log`, `workbench-package-menu.log`, `workbench-package-full.log`. Artifact: `bin/ScanTailor-CLI-3.1-win64/` and sibling ZIP; earlier packages are preserved. A temporary clipboard access-denied condition during browser automation cleared after that browser session ended; native clipboard tests then passed. Clipboard retry is bounded and never writes clipboard data.
+
+## CLI 3.2 image encoding — verified 2026-09-12; reconciled 2026-09-13
+
+PNG level 6 is the default for PDF-rendered and processed page images. Native/PDF/workbench configuration supports PNG 0–9, TIFF none/LZW/Deflate and JPEG quality 1–100. Original sources remain untouched. See CLI.md for preserve fallback and transparent layer exceptions.
+
+Validation completed using the offline Windows Qt 6.8.3 toolchain:
+
+- 5 CTest tests passed (`build-native/encoding-ctest.log`).
+- 20 native CLI/PDF tests passed, including the real GUI project roundtrip (`encoding-full-tests.log`).
+- 11 encoding tests passed (`encoding-tests.log`): actual formats, PNG pixels/DPI/compression, TIFF codec tags and grayscale/bilevel pixels, JPEG quantization and lossless fallback, layers, configuration priority, ownership across PNG→TIFF→PNG, selected-page validation, PDF mapping/source integrity, and workbench snapshots.
+- 9 workbench and 8 menu regressions passed (`encoding-workbench-tests.log`, `encoding-menu-tests.log`).
+- Isolated portable package with bundled Python and Windows-only PATH passed 11 encoding, 9 workbench, 8 menu and 19 workflow tests; the non-distributed GUI harness is the sole skip and is covered by the native run (`encoding-portable-*.log`).
+- `tests/pdf_encoding_entrypoint.ps1` passed real PowerShell forwarding for PNG level 0, TIFF LZW and JPEG quality 25; source PDF hash unchanged (`encoding-powershell-test.log`).
+
+One independent Bugbot review (generic agent; dedicated tool unavailable) found three P2 issues. Fixed schema 1 format overrides retaining old codec flags, resume refusing retained earlier-format output, and JPEG validation incorrectly including unselected layer pages. All three have focused `test_review_*` regressions in `tests/image_encoding_integration.py`. Local validation also caught and fixed Qt missing-key insertion, effective layer artifact reporting, isolated Python sibling imports and PowerShell argument grouping.
+
+Artifact: `bin/ScanTailor-CLI-3.2-win64/` and its sibling ZIP, built locally; no GitHub release upload. Package manifest lists file SHA-256 values; `source-provenance.json` identifies the implementation and registry commit. Previous packages remain available. No new browser interaction claim is made for this encoding-only change.

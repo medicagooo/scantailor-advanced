@@ -136,9 +136,9 @@ class CliTests(unittest.TestCase):
         report = json.loads((output / "report.json").read_text(encoding="utf-8"))
         self.assertEqual(report["errors"], 1)
         self.assertEqual(report["complete"], 1)
-        sha = digest(output / "001.tif")
+        sha = digest(output / "001.png")
         self.process(output, accepted=(3,))
-        self.assertEqual(sha, digest(output / "001.tif"))
+        self.assertEqual(sha, digest(output / "001.png"))
 
     def test_pdf_page_order_size_and_resume(self):
         fixture(self.inputs / "001.png")

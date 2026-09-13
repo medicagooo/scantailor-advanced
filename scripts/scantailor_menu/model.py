@@ -9,6 +9,7 @@ import json
 import math
 import os
 from pathlib import Path
+import image_encoding
 import signal
 import subprocess
 import threading
@@ -108,11 +109,12 @@ class Controller:
         self.invalidate()
         self.kind, self.inputs = kind, resolved
         # Stable IDs, page numbers and geometric coordinates belong to old sources.
-        self.config = {'schema_version': 2}
+        self.config = {'schema_version': 2, **({'image_encoding': self.config['image_encoding']} if 'image_encoding' in self.config else {})}
         self.options['pages'] = 'all'
 
     def apply(self, config):
         validate(self.schema, config)
+        image_encoding.resolve(config.get("image_encoding", {}))
         for rule in config.get('rules', []):
             if not rule['select'] or not rule['settings']:
                 raise ValueError('Rules require a nonempty scope and settings')
@@ -158,6 +160,7 @@ class Controller:
         if command == 'process' and not self.output:
             raise ValueError('Choose output directory first')
         validate(self.schema, self.config)
+        image_encoding.resolve(self.config.get("image_encoding", {}))
         folder = self.new_folder()
         config = folder / 'settings.json'
         write_json(config, self.config)

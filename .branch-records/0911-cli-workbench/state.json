@@ -6,8 +6,8 @@
     "Windows native PowerShell; bundled Python stdlib console runtime",
     "Explicit push master authorization; no force push or manual CI"
   ],
-  "next": "Push committed local master to origin/master via op-push; verify remote/local SHAs. Pending pointer may remain until next ordinary registry update.",
-  "status": "active",
+  "next": "None",
+  "status": "complete",
   "acceptance": [
     "Real clipboard and input tests pass including Chinese spaces quoted multiline paths",
     "End-to-end file selection to processing and recovery remains valid",
@@ -26,6 +26,7 @@
     "tests/workbench_integration.py",
     "tests/menu_integration.py",
     "tests/render_workbench.py",
-    "Local master verified at 89885258c89732a5d361dc58ff16709a18f48419 after op-merge"
+    "Local master verified at 89885258c89732a5d361dc58ff16709a18f48419 after op-merge",
+    "2026-09-12 reconciled completed push: local master and fetched origin/master both 11d8182a831db59817c9e28b7f7ed8e5057be39f"
   ]
 }

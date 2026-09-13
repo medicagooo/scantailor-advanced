@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+import image_encoding
 import time
 from .editing import parse_paths
 from .rendering import Frame, FG, MUTED, ACCENT, WARN
@@ -136,11 +137,15 @@ class Workbench:
                 current = defaults.get(section, {}).get(key)
                 description = names[values.index(current)] if current in values else '沿用已有设置'
                 labels.append(f'{name}    {description}')
-            index = self.c.choose('常用设置', labels + ['四边页边距', '疑难页处理方式', '应用设置', '放弃修改'],
+            index = self.c.choose('常用设置', labels + ['四边页边距', '疑难页处理方式', '应用设置', '放弃修改', '中间图片格式与压缩'],
                                   '修改仅在此草稿中生效；高级参数在“全部设置”中')
             if index is None or index == 7:
                 return
-            if index < 4:
+            if index == 8:
+                value = self.encoding(draft.get('image_encoding', {}))
+                if value is not None:
+                    draft['image_encoding'] = value
+            elif index < 4:
                 name, section, key, values, names = fields[index]
                 selected = self.c.choose(name, names)
                 if selected is not None:
@@ -166,10 +171,36 @@ class Workbench:
                 self.scheme = '自定义'
                 return
 
+    def encoding(self, current):
+        draft = image_encoding.resolve(current)
+        while True:
+            fmt = draft['format']
+            key = {'png': 'png_compression', 'tiff': 'tiff_compression', 'jpeg': 'jpeg_quality'}[fmt]
+            label = {'png': '压缩等级（0–9）', 'tiff': '压缩方式', 'jpeg': '图像质量（1–100）'}[fmt]
+            value = draft[key]
+            display = {'none': '无压缩', 'lzw': 'LZW', 'deflate': 'Deflate'}.get(value, str(value))
+            hint = '无损；更高压缩等级通常更慢' if fmt == 'png' else '无损压缩' if fmt == 'tiff' else '有损编码；不支持透明分层输出；疑难页仍无损保留'
+            choice = self.c.choose('中间图片', ['格式    ' + fmt.upper(), label + '    ' + display, '应用', '取消'], hint)
+            if choice is None or choice == 3:
+                return None
+            if choice == 0:
+                selected = self.c.choose('图片格式', ['PNG · 无损（推荐）', 'TIFF · 无损', 'JPEG · 有损'])
+                if selected is not None:
+                    draft = image_encoding.resolve(draft, {'format': ['png', 'tiff', 'jpeg'][selected]})
+            elif choice == 1:
+                if fmt == 'tiff':
+                    selected = self.c.choose('TIFF 压缩', ['无压缩', 'LZW', 'Deflate'])
+                    if selected is not None: draft[key] = ['none', 'lzw', 'deflate'][selected]
+                else:
+                    ok, value = self.ui.edit(label, {'type': 'integer', 'minimum': 0 if fmt == 'png' else 1, 'maximum': 9 if fmt == 'png' else 100}, draft[key])
+                    if ok: draft[key] = value
+            elif choice == 2:
+                return image_encoding.resolve(draft)
+
     def schemes(self):
         choice = self.c.choose('选择处理方案', ['保真整理 · 保留颜色、细线，疑难页保留原页', '黑白文档 · 适合纯文字扫描', '自定义常用设置', '全部设置 / 按页规则', '保存或载入设置文件'])
         if choice in (0, 1):
-            config = {'schema_version': 2, 'preset': 'physics-safe'}
+            config = {'schema_version': 2, 'preset': 'physics-safe', 'image_encoding': self.m.config.get('image_encoding', {})}
             if choice == 1:
                 config['defaults'] = {'output': {'mode': 'bw'}}
             self.m.apply(config)
@@ -254,6 +285,9 @@ class Workbench:
             frame.text(x + 1, 10, f'输入分辨率   {self.m.options["dpi"]} DPI', FG)
             frame.text(x + 1, 12, f'同时处理     {self.m.options["jobs"]} 页', FG)
             frame.text(x + 1, 14, '疑难页       ' + ('保留原页' if self.m.options['review_policy'] == 'preserve' else '标记复核'), FG)
+            encoding = image_encoding.resolve(self.m.config.get('image_encoding', {}))
+            compression = next(v for k, v in encoding.items() if k != 'format')
+            frame.text(x + 1, 16, f'中间图片     {encoding["format"].upper()} · {compression}', FG, width - x - 4)
             frame.text(x + 1, 17, '地址输入支持', ACCENT)
             frame.text(x + 1, 19, 'Ctrl+V / Shift+Insert / 右键', MUTED)
             frame.text(x + 1, 20, '多行地址 · 中文路径 · 引号', MUTED)

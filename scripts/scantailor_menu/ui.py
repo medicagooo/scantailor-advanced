@@ -21,6 +21,7 @@ LABELS = {'defaults': '全局页面设置', 'project': '项目设置', 'rules': 
           'picture_zones': '图片区域', 'fill_zones': '填色区域', 'select': '作用范围', 'settings': '参数',
           'reading_direction': '阅读顺序', 'dpi': 'DPI', 'jobs': '并发数', 'pages': '输出页范围',
           'stage': '分析 / 预览阶段', 'page_size': 'PDF 页面尺寸', 'review_policy': '疑难页策略'}
+LABELS.update(dict(image_encoding='中间图片', format='图片格式', png_compression='PNG 压缩等级', tiff_compression='TIFF 压缩方式', jpeg_quality='JPEG 质量'))
 LABELS.update(dict(rotation='顺时针旋转（度）', trim='初裁切', enabled='启用', left='左边', right='右边', top='上边', bottom='下边',
                   mode='处理模式', angle='纠偏角度（度）', oblique_mode='斜切模式', oblique_angle='斜切角度（度）',
                   space='坐标空间', cutters='拆分线端点', page_mode='纸张框检测', content_mode='正文框检测', page_rect='纸张框 [横坐标,纵坐标,宽,高]',

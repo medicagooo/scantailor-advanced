@@ -166,9 +166,12 @@ class FullCliTests(legacy.CliTests):
             config = self.config(defaults={"deskew": {"mode": "off"}, "content": {"page_mode": "off"},
                 "output": {"mode": "bw", "threshold_method": method, "threshold_window": 31, "normalize_bw": False}})
             self.process(self.root / method, "--config", config)
-            with Image.open(self.root / method / "001.tif") as image:
+            with Image.open(self.root / method / "001.png") as image:
                 self.assertEqual(image.size, (1000,1400))
-                self.assertEqual(image.mode, "1")
+                # PNG may encode the same two colors as a 1-bit palette.
+                self.assertIn(image.mode, ("1", "P"))
+                self.assertEqual(Path(image.filename).read_bytes()[24], 1)
+                self.assertTrue(set(image.convert("L").getdata()) <= {0,255})
         config = self.config(defaults={"deskew": {"mode": "off"}, "content": {"page_mode": "off"},
             "output": {"mode": "mixed", "split_output": True, "original_background": True, "picture_shape": "off"},
             "picture_zones": [{"space": "source", "layer": "picture", "points": [[80,1080],[720,1080],[720,1250],[80,1250]]}],
@@ -285,7 +288,7 @@ class FullCliTests(legacy.CliTests):
         project = self.project(config); info = self.inspect(project)["pages"][0]["settings"]
         self.assertEqual(info["input"]["dpi"],[180,160]); self.assertEqual(info["output"]["dpi"],[180,160])
         self.invoke("process","--project",project,"--output",self.root / "dpi-output")
-        with Image.open(self.root / "dpi-output/001.tif") as image: self.assertEqual(image.size,(600,800))
+        with Image.open(self.root / "dpi-output/001.png") as image: self.assertEqual(image.size,(600,800))
 
     def test_review_fixes_split_aggregate_and_final_previews(self):
         image = Image.new("RGB",(1200,800),"white"); image.paste("red",(0,0,600,800)); image.paste("blue",(600,0,1200,800))

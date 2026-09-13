@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "FileNameDisambiguator.h"
+#include "ImageEncoding.h"
 
 class PageId;
 class AbstractRelinker;
@@ -21,6 +22,10 @@ class OutputFileNameGenerator {
   OutputFileNameGenerator(std::shared_ptr<FileNameDisambiguator> disambiguator,
                           const QString& outDir,
                           Qt::LayoutDirection layoutDirection);
+
+  // CLI supplies an immutable page-output policy. GUI constructors keep TIFF.
+  void setImageEncoding(const ImageEncoding& encoding) { m_encoding = encoding; }
+  bool writeImage(const QString& path, const QImage& image) const { return m_encoding.write(path, image); }
 
   void performRelinking(const AbstractRelinker& relinker);
 
@@ -41,6 +46,7 @@ class OutputFileNameGenerator {
  private:
   std::shared_ptr<FileNameDisambiguator> m_disambiguator;
   QString m_outDir;
+  ImageEncoding m_encoding;
   Qt::LayoutDirection m_layoutDirection;
 };
 

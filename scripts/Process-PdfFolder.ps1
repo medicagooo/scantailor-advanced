@@ -7,6 +7,10 @@ param(
     [ValidateRange(72, 1200)][int]$Dpi = 300,
     [ValidateRange(1, 16)][int]$Jobs = 1,
     [ValidateSet('original', 'processed')][string]$PageSize = 'original',
+    [ValidateSet('png', 'tiff', 'jpeg')][string]$ImageFormat,
+    [ValidateRange(0, 9)][int]$PngCompression,
+    [ValidateSet('none', 'lzw', 'deflate')][string]$TiffCompression,
+    [ValidateRange(1, 100)][int]$JpegQuality,
     [string]$Config,
     [switch]$Resume,
     [switch]$Overwrite,
@@ -28,6 +32,9 @@ if (-not $PythonExe) {
 }
 $arguments = @((Join-Path $PSScriptRoot 'process_pdf_folder.py'), '--pdf-dir', $resolvedPdf,
     '--cli', $cliExe, '--dpi', "$Dpi", '--jobs', "$Jobs", '--page-size', $PageSize)
+foreach ($pair in @(@('ImageFormat','image-format'), @('PngCompression','png-compression'), @('TiffCompression','tiff-compression'), @('JpegQuality','jpeg-quality'))) {
+    if ($PSBoundParameters.ContainsKey($pair[0])) { $arguments += @(('--' + $pair[1]), [string]$PSBoundParameters[$pair[0]]) }
+}
 if ($OutputDir) { $arguments += @('--output-dir', $OutputDir) }
 if ($Config) { $arguments += @('--config', (Resolve-Path -LiteralPath $Config).Path) }
 if ($Resume) { $arguments += '--resume' }

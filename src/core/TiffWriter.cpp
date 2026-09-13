@@ -82,8 +82,8 @@ static toff_t deviceSeek(thandle_t context, toff_t offset, int whence) {
 }
 
 static int deviceClose(thandle_t context) {
-  auto* dev = (QIODevice*) context;
-  dev->close();
+  // The caller owns the device (including QSaveFile commit/cancel).
+  // TIFFClose flushes its directory but must not close the caller's device.
   return 0;
 }
 
@@ -101,7 +101,7 @@ static void deviceUnmap(thandle_t, tdata_t, toff_t) {
   // Not implemented.
 }
 
-bool TiffWriter::writeImage(const QString& filePath, const QImage& image) {
+bool TiffWriter::writeImage(const QString& filePath, const QImage& image, int compression) {
   if (image.isNull()) {
     return false;
   }
@@ -111,14 +111,14 @@ bool TiffWriter::writeImage(const QString& filePath, const QImage& image) {
     return false;
   }
 
-  if (!writeImage(file, image)) {
+  if (!writeImage(file, image, compression)) {
     file.remove();
     return false;
   }
   return true;
 }
 
-bool TiffWriter::writeImage(QIODevice& device, const QImage& image) {
+bool TiffWriter::writeImage(QIODevice& device, const QImage& image, int compression) {
   if (image.isNull()) {
     return false;
   }
@@ -149,13 +149,13 @@ bool TiffWriter::writeImage(QIODevice& device, const QImage& image) {
     case QImage::Format_Mono:
     case QImage::Format_MonoLSB:
     case QImage::Format_Indexed8:
-      return writeBitonalOrIndexed8Image(tif, image);
+      return writeBitonalOrIndexed8Image(tif, image, compression);
     default:;
   }
   if (image.hasAlphaChannel()) {
-    return writeARGB32Image(tif, image.convertToFormat(QImage::Format_ARGB32));
+    return writeARGB32Image(tif, image.convertToFormat(QImage::Format_ARGB32), compression);
   } else {
-    return writeRGB32Image(tif, image.convertToFormat(QImage::Format_RGB32));
+    return writeRGB32Image(tif, image.convertToFormat(QImage::Format_RGB32), compression);
   }
 }  // TiffWriter::writeImage
 
@@ -190,7 +190,7 @@ void TiffWriter::setDpm(const TiffHandle& tif, const Dpm& dpm) {
   TIFFSetField(tif.handle(), TIFFTAG_RESOLUTIONUNIT, unit);
 }
 
-bool TiffWriter::writeBitonalOrIndexed8Image(const TiffHandle& tif, const QImage& image) {
+bool TiffWriter::writeBitonalOrIndexed8Image(const TiffHandle& tif, const QImage& image, int compression) {
   TIFFSetField(tif.handle(), TIFFTAG_SAMPLESPERPIXEL, uint16_t(1));
 
   uint16_t bitsPerSample = 8;
@@ -223,10 +223,10 @@ bool TiffWriter::writeBitonalOrIndexed8Image(const TiffHandle& tif, const QImage
 
   if (image.format() == QImage::Format_Indexed8) {
     TIFFSetField(tif.handle(), TIFFTAG_COMPRESSION,
-                 uint16_t(ApplicationSettings::getInstance().getTiffColorCompression()));
+                 uint16_t(compression >= 0 ? compression : ApplicationSettings::getInstance().getTiffColorCompression()));
   } else {
     TIFFSetField(tif.handle(), TIFFTAG_COMPRESSION,
-                 uint16_t(ApplicationSettings::getInstance().getTiffBwCompression()));
+                 uint16_t(compression >= 0 ? compression : ApplicationSettings::getInstance().getTiffBwCompression()));
   }
 
   TIFFSetField(tif.handle(), TIFFTAG_BITSPERSAMPLE, bitsPerSample);
@@ -261,12 +261,12 @@ bool TiffWriter::writeBitonalOrIndexed8Image(const TiffHandle& tif, const QImage
   }
 }  // TiffWriter::writeBitonalOrIndexed8Image
 
-bool TiffWriter::writeRGB32Image(const TiffHandle& tif, const QImage& image) {
+bool TiffWriter::writeRGB32Image(const TiffHandle& tif, const QImage& image, int compression) {
   assert(image.format() == QImage::Format_RGB32);
 
   TIFFSetField(tif.handle(), TIFFTAG_SAMPLESPERPIXEL, uint16_t(3));
   TIFFSetField(tif.handle(), TIFFTAG_COMPRESSION,
-               uint16_t(ApplicationSettings::getInstance().getTiffColorCompression()));
+               uint16_t(compression >= 0 ? compression : ApplicationSettings::getInstance().getTiffColorCompression()));
   TIFFSetField(tif.handle(), TIFFTAG_BITSPERSAMPLE, uint16_t(8));
   TIFFSetField(tif.handle(), TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
@@ -295,12 +295,12 @@ bool TiffWriter::writeRGB32Image(const TiffHandle& tif, const QImage& image) {
   return true;
 }  // TiffWriter::writeRGB32Image
 
-bool TiffWriter::writeARGB32Image(const TiffHandle& tif, const QImage& image) {
+bool TiffWriter::writeARGB32Image(const TiffHandle& tif, const QImage& image, int compression) {
   assert(image.format() == QImage::Format_ARGB32);
 
   TIFFSetField(tif.handle(), TIFFTAG_SAMPLESPERPIXEL, uint16_t(4));
   TIFFSetField(tif.handle(), TIFFTAG_COMPRESSION,
-               uint16_t(ApplicationSettings::getInstance().getTiffColorCompression()));
+               uint16_t(compression >= 0 ? compression : ApplicationSettings::getInstance().getTiffColorCompression()));
   TIFFSetField(tif.handle(), TIFFTAG_BITSPERSAMPLE, uint16_t(8));
   TIFFSetField(tif.handle(), TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 

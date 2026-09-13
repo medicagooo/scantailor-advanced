@@ -23,7 +23,7 @@ class TiffWriter {
    * \param image The image to write.  Writing a null image will fail.
    * \return True on success, false on failure.
    */
-  static bool writeImage(const QString& filePath, const QImage& image);
+  static bool writeImage(const QString& filePath, const QImage& image, int compression = -1);
 
   /**
    * \brief Writes a QImage in TIFF format to an IO device.
@@ -33,18 +33,18 @@ class TiffWriter {
    * \param image The image to write.  Writing a null image will fail.
    * \return True on success, false on failure.
    */
-  static bool writeImage(QIODevice& device, const QImage& image);
+  static bool writeImage(QIODevice& device, const QImage& image, int compression = -1);
 
  private:
   class TiffHandle;
 
   static void setDpm(const TiffHandle& tif, const Dpm& dpm);
 
-  static bool writeBitonalOrIndexed8Image(const TiffHandle& tif, const QImage& image);
+  static bool writeBitonalOrIndexed8Image(const TiffHandle& tif, const QImage& image, int compression = -1);
 
-  static bool writeRGB32Image(const TiffHandle& tif, const QImage& image);
+  static bool writeRGB32Image(const TiffHandle& tif, const QImage& image, int compression = -1);
 
-  static bool writeARGB32Image(const TiffHandle& tif, const QImage& image);
+  static bool writeARGB32Image(const TiffHandle& tif, const QImage& image, int compression = -1);
 
   static bool write8bitLines(const TiffHandle& tif, const QImage& image);
 

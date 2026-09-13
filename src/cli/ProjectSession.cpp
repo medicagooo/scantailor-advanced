@@ -270,7 +270,9 @@ QJsonObject ProjectSession::inspect(bool exportConfig) const {
       for (const auto& key : {"input", "orientation", "split"}) source[key] = settings[key];
       rules.append(QJsonObject{{"select", QJsonObject{{"image_ids", QJsonArray{pages->stableImageId(p.imageId())}}}}, {"settings", source}});
     }
-    return {{"schema_version", 2}, {"project", processing::inspectProject(*stages, *pages)}, {"rules", rules}};
+    QJsonObject result{{"schema_version", 2}, {"project", processing::inspectProject(*stages, *pages)}, {"rules", rules}};
+    if (config.contains("image_encoding")) result["image_encoding"] = config["image_encoding"];
+    return result;
   }
   return {{"schema_version", 2}, {"project", processing::inspectProject(*stages, *pages)}, {"pages", list}, {"import_errors", importErrors}};
 }

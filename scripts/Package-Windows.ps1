@@ -58,7 +58,7 @@ try {
 New-Item -ItemType Directory -Path (Join-Path $packagePath 'translations') | Out-Null
 Get-ChildItem -LiteralPath $buildPath -Filter 'scantailor-advanced_*.qm' |
     ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $packagePath 'translations') }
-foreach ($name in @('Process-PdfFolder.ps1', 'process_pdf_folder.py', 'requirements-pdf.txt', 'physics-safe.json', 'menu.py')) {
+foreach ($name in @('Process-PdfFolder.ps1', 'process_pdf_folder.py', 'requirements-pdf.txt', 'physics-safe.json', 'menu.py', 'image_encoding.py')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $packagePath
 }
 Copy-Item -LiteralPath (Join-Path $sourceDir 'LICENSE') -Destination $packagePath

@@ -137,11 +137,11 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, 
   const QFileInfo originalBackgroundFileInfo(originalBackgroundFilePath);
 
   const QString automaskDir(Utils::automaskDir(m_outFileNameGen.outDir()));
-  const QString automaskFilePath(QDir(automaskDir).absoluteFilePath(outFileInfo.fileName()));
+  const QString automaskFilePath(QDir(automaskDir).absoluteFilePath(outFileInfo.completeBaseName() + ".tif"));
   QFileInfo automaskFileInfo(automaskFilePath);
 
   const QString specklesDir(Utils::specklesDir(m_outFileNameGen.outDir()));
-  const QString specklesFilePath(QDir(specklesDir).absoluteFilePath(outFileInfo.fileName()));
+  const QString specklesFilePath(QDir(specklesDir).absoluteFilePath(outFileInfo.completeBaseName() + ".tif"));
   QFileInfo specklesFileInfo(specklesFilePath);
 
   const bool needPictureEditor = renderParams.mixedOutput() && !m_batchProcessing;
@@ -348,8 +348,8 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, 
 
         QDir().mkdir(foregroundDir);
         QDir().mkdir(backgroundDir);
-        if (!TiffWriter::writeImage(foregroundFilePath, outputImageWithForeground->getForegroundImage())
-            || !TiffWriter::writeImage(backgroundFilePath, outputImageWithForeground->getBackgroundImage())) {
+        if (!m_outFileNameGen.writeImage(foregroundFilePath, outputImageWithForeground->getForegroundImage())
+            || !m_outFileNameGen.writeImage(backgroundFilePath, outputImageWithForeground->getBackgroundImage())) {
           invalidateParams = true;
         }
 
@@ -357,7 +357,7 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, 
           auto* outputImageWithOrigBg = dynamic_cast<OutputImageWithOriginalBackground*>(outputImage.get());
 
           QDir().mkdir(originalBackgroundDir);
-          if (!TiffWriter::writeImage(originalBackgroundFilePath,
+          if (!m_outFileNameGen.writeImage(originalBackgroundFilePath,
                                       outputImageWithOrigBg->getOriginalBackgroundImage())) {
             invalidateParams = true;
           }
@@ -375,7 +375,7 @@ FilterResultPtr Task::process(const TaskStatus& status, const FilterData& data, 
       QFile::remove(backgroundFilePath);
     }
 
-    if (!TiffWriter::writeImage(outFilePath, outImg)) {
+    if (!m_outFileNameGen.writeImage(outFilePath, outImg)) {
       invalidateParams = true;
     } else {
       deleteMutuallyExclusiveOutputFiles();

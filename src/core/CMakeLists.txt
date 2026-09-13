@@ -3,6 +3,7 @@ set(common_ui_files
 
 set(common_sources
     ProcessingConfiguration.cpp ProcessingConfiguration.h
+    ImageEncoding.cpp ImageEncoding.h
     CompositeTaskFactory.cpp CompositeTaskFactory.h
     Application.cpp Application.h
     BackgroundExecutor.cpp BackgroundExecutor.h

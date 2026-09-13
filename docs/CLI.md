@@ -29,7 +29,7 @@ CLI 3.1 提供中文终端工作台、地址粘贴和抽样预览：双击 `scan
 便携包自带 Python 时不需要安装 Python。源码运行需先在自己的 Python 环境安装
 `scripts/requirements-pdf.txt` 中的精确版本。运行与构建不会自动联网安装依赖。
 
-PDF 入口目前统一渲染为 RGB PNG，再处理。默认 300 DPI，可用 `-Dpi` 调整；
+PDF 入口默认渲染为 RGB PNG（无损压缩等级 6），支持配置 PNG/TIFF/JPEG，详见下方图片编码设置。默认 300 DPI，可用 `-Dpi` 调整；
 它没有自动判断扫描原始 DPI，也不承诺无损提取 PDF 内部扫描图。
 默认单页打印尺寸保持原 PDF 的可见页面尺寸；双页和 processed 尺寸模式见下文。处理图等比例适配该尺寸，必要时增加白边，
 不拉伸、不裁掉适配后的图像。被标记为异常的页面保留原 PDF 页。
@@ -293,7 +293,7 @@ points.json 示例：`{"schema_version":1,"id":"源ID:left","from":"source","to"
 PDF 现在支持一张源页变为两张逻辑页，保持 CLI 的左右阅读顺序。`batch-report.json` 记录 source_page、logical_id、subpage。
 目录指向原源页的第一个结果页；任一半失败或被标记时，整张原 PDF 页只插入一次，不重复源页。
 `-PageSize original`（默认）保留单页原可见尺寸，双页各占已旋转源页宽度的一半；适配图像时保持比例。
-`-PageSize processed` 根据 TIFF 像素／输出 DPI 使用处理后的物理尺寸；回退页仍保留原 PDF 尺寸。
+`-PageSize processed` 根据处理结果图片像素／输出 DPI 使用处理后的物理尺寸；回退页仍保留原 PDF 尺寸。
 PDF 渲染输入通过内容哈希生成稳定 ID，不依赖临时处理版本目录；修改配置后可继续定位同一源页。
 
 ### 与 GUI 的关系
@@ -303,3 +303,44 @@ CLI 的 ProcessingConfiguration 是类型校验和设置适配层；GUI 继续�
 新增 `.scan` 可选属性 stableId、frozenWidthMM/frozenHeightMM、曲线 point tension；旧项目缺少时按原默认读取。
 本版本 GUI 能保留这些字段。更早 GUI 可以读取项目，但再保存时可能丢失新元数据或自定义张力；应使用同包 GUI 往返编辑。
 自动检测仍可能需要人工复核，CLI 不承诺自动识别每个公式、细线或书脊边界。
+
+
+### CLI 3.2：中间页面图片的格式与压缩
+
+PDF 渲染输入和处理后的页面文件默认使用 PNG，压缩等级 6。直接输入的原图片不修改。
+原生 `process/analyze/preview`、PDF Python 入口及 PowerShell 入口支持相同编码设置：
+
+| 参数 | 范围 | 默认 |
+|---|---|---|
+| `--image-format` / `-ImageFormat` | png、tiff、jpeg | png |
+| `--png-compression` / `-PngCompression` | 整数 0–9，0 不压缩 | 6 |
+| `--tiff-compression` / `-TiffCompression` | none、lzw、deflate | deflate |
+| `--jpeg-quality` / `-JpegQuality` | 整数 1–100 | 95 |
+
+PNG/TIFF 无损；PNG 等级改变压缩时间和体积，不改变像素。JPEG 有损，会在 PDF 渲染和处理输出时各编码一次。
+JPEG 不能用于 `output.split_output` 分层导出，因为它不能保存透明信息；普通左右拆页不受此限制。
+JPEG 模式下，原生疑难单页的 preserve 回退写为 `*-preserved.png`，保留无损恢复语义；PDF 疑难页仍插回原 PDF 页。
+HTML 缩略预览继续使用 PNG，GUI 默认输出及 automask/speckles 内部缓存仍为 TIFF。
+GUI 打开 CLI 保存的项目后，会按自身 TIFF 输出规则重新生成页面；编码策略不写入 GUI XML。
+
+```powershell
+.\scantailor-cli.exe process --input 'D:\扫描图片' --output 'D:\结果' --image-format png --png-compression 6
+.\Process-PdfFolder.ps1 -PdfDir 'D:\扫描PDF' -ScanTailorDir 'D:\工具' -ImageFormat tiff -TiffCompression lzw
+```
+
+schema 2 设置文件示例（菜单保存/载入使用此格式）：
+
+```json
+{"schema_version":2,"image_encoding":{"format":"png","png_compression":6}}
+```
+
+配置只填写所选格式对应的压缩字段。优先级是显式 CLI 参数 > 配置文件 > 默认值；CLI 改变格式时丢弃配置中旧格式的压缩字段，再应用新格式参数/默认值。
+显式传入不属于所选格式的参数或越界值会报错。schema 1 仍支持同名连字符参数键。
+编码设置参与任务快照、预览失效和恢复指纹；改变设置后重新处理，PDF 使用新一代工作目录，旧中间数据保留。
+报告中的页面 `image_encoding` 记录实际编码，疑难页回退可能与请求格式不同。
+中间图片的压缩级别不控制最终 PDF 的压缩，不能据此保证最终 PDF 变小。
+
+实现关系：`main.cpp` 解析/合并策略，`ImageEncoding` 校验并编码，`OutputFileNameGenerator` 将不可变策略复制到每个输出任务；
+`output::Task` 对页面及分层文件使用策略，内部缓存使用原 TIFF 写入器。`BatchRunner` 处理无损回退与报告。
+`process_pdf_folder.py` 和 `image_encoding.py` 负责 PDF 渲染及向原生 CLI 传递相同策略。
+Qt PNG 压缩值映射依据 [Qt 6.8.3 QPNG 源码](https://github.com/qt/qtbase/blob/v6.8.3/src/gui/image/qpnghandler.cpp)。

@@ -1,0 +1,33 @@
+{
+  "evidence": [
+    "docs/CLI.md",
+    "docs/MENU.md",
+    "docs/VERIFICATION.md",
+    "tests/image_encoding_integration.py",
+    "tests/pdf_encoding_entrypoint.ps1",
+    "tests/cli_full_integration.py",
+    "tests/workbench_integration.py",
+    "tests/menu_integration.py",
+    "Independent encoding_bugbot review found 3 P2 issues; all fixed and covered by test_review_*",
+    "11 encoding, 20 full native including GUI, 5 CTest, 9 workbench, 8 menu passed; isolated portable 11 encoding, 19 workflow plus one GUI skip, 9 workbench, 8 menu and 3 PowerShell codec runs passed"
+  ],
+  "requirements": [
+    "PNG/TIFF/JPEG intermediate page encoding; PNG lossless level 6 default",
+    "Format-specific compression configurable in native CLI, PDF Python/PowerShell and Chinese workbench; persisted config and fixed execution snapshots",
+    "Independent Bugbot review, repair and verification; normal push to existing master explicitly confirmed"
+  ],
+  "constraints": [
+    "Original input files and PDF preserve fallback remain unchanged",
+    "GUI defaults/internal mask caches remain TIFF; JPEG transparent split-output layers rejected only for selected pages; single-page preserve fallback uses PNG",
+    "Windows native offline build; no force push, no manual Actions; local package only, no GitHub release requested"
+  ],
+  "acceptance": [
+    "Correct encoded bytes/extensions and settings in reports",
+    "Lossless PNG levels have identical pixels; TIFF tags and JPEG quality verified",
+    "Native/PDF/split/GUI/resume/workbench regressions pass"
+  ],
+  "status": "active",
+  "next": "Commit verified implementation including op-merge, fast-forward local master, predeclare/commit/push origin/master, verify remote SHA and finalize local ZIP provenance.",
+  "integration": "unmerged",
+  "purpose": "Configurable intermediate page image encoding with PNG default"
+}

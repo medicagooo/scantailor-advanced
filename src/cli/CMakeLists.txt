@@ -9,6 +9,7 @@ target_include_directories(scantailor-cli PRIVATE "$<TARGET_PROPERTY:TIFF::TIFF,
 install(TARGETS scantailor-cli RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 # Relink/copy when the controller changes even without a C++ source edit.
 set_property(TARGET scantailor-cli APPEND PROPERTY LINK_DEPENDS
+    "${CMAKE_SOURCE_DIR}/scripts/image_encoding.py"
     "${CMAKE_SOURCE_DIR}/scripts/menu.py"
     "${CMAKE_SOURCE_DIR}/scripts/process_pdf_folder.py"
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/__init__.py"
@@ -20,13 +21,15 @@ set_property(TARGET scantailor-cli APPEND PROPERTY LINK_DEPENDS
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/preview.py"
     "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu/ui.py")
 add_custom_command(TARGET scantailor-cli POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/scripts/image_encoding.py" "$<TARGET_FILE_DIR:scantailor-cli>/image_encoding.py"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/scripts/menu.py" "$<TARGET_FILE_DIR:scantailor-cli>/menu.py"
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/scripts/process_pdf_folder.py" "$<TARGET_FILE_DIR:scantailor-cli>/process_pdf_folder.py"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu" "$<TARGET_FILE_DIR:scantailor-cli>/scantailor_menu")
-install(FILES "${CMAKE_SOURCE_DIR}/scripts/menu.py" "${CMAKE_SOURCE_DIR}/scripts/process_pdf_folder.py" DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(FILES "${CMAKE_SOURCE_DIR}/scripts/image_encoding.py" "${CMAKE_SOURCE_DIR}/scripts/menu.py" "${CMAKE_SOURCE_DIR}/scripts/process_pdf_folder.py" DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/scripts/scantailor_menu" DESTINATION "${CMAKE_INSTALL_BINDIR}" PATTERN "__pycache__" EXCLUDE)
 if(Qt6_FOUND AND WIN32)
   add_custom_command(TARGET scantailor-cli POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/scripts/image_encoding.py" "$<TARGET_FILE_DIR:scantailor-cli>/image_encoding.py"
     COMMAND "${QT_BINDIR}/windeployqt" $<TARGET_FILE:scantailor-cli>
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:scantailor-cli>/platforms"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:Qt6::QOffscreenIntegrationPlugin>"

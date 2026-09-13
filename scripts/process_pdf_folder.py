@@ -24,10 +24,14 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
+# Embedded Python uses an isolated search path; include this packaged sibling.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pymupdf
 from PIL import Image
+import image_encoding
 
-VERSION = 3
+VERSION = 4
 
 
 def request_cancel(signum, frame):
@@ -139,9 +143,10 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
     previous = load_json(state_path)
     signature = {"version": VERSION, "source": str(source), "source_sha256": sha256(source),
                  "cli_sha256": sha256(args.cli), "dpi": args.dpi, "page_size": args.page_size, "config_sha256": config_hash,
-                 "wrapper_sha256": sha256(Path(__file__)), "pymupdf_version": pymupdf.VersionBind,
+                 "wrapper_sha256": sha256(Path(__file__)), "encoding_sha256": sha256(Path(image_encoding.__file__)), "pymupdf_version": pymupdf.VersionBind,
                  "command": args.command, "stage": args.stage, "review_policy": args.review_policy,
-                 "max_angle": args.max_angle, "min_page_ratio": args.min_page_ratio}
+                 "max_angle": args.max_angle, "min_page_ratio": args.min_page_ratio,
+                 "image_encoding": args.image_encoding}
     fingerprint = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()
     if args.command == "process" and destination.exists() and not (args.overwrite or (args.resume and previous.get("destination") == str(destination))):
         raise RuntimeError(f"Output exists: {destination}; use --resume or --overwrite")
@@ -162,6 +167,7 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
     state = {"schema_version": 1, "fingerprint": fingerprint, "signature": signature,
              "destination": str(destination), "status": "active"}
     save_json(state_path, state)
+    extension = image_encoding.suffix(args.image_encoding)
     with pymupdf.open(source) as original:
         if original.needs_pass:
             raise RuntimeError("Encrypted PDF requires a decrypted input copy")
@@ -169,13 +175,15 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
             raise RuntimeError("PDF has no pages")
         dimensions = []
         for index, page in enumerate(original):
-            image_path = images / f"{index+1:05d}.png"
+            image_path = images / f"{index+1:05d}{extension}"
             dimensions.append((page.rect.width, page.rect.height))
             old = rendered.get(str(index), {})
             if not (args.resume and image_path.exists() and old.get("sha256") == sha256(image_path)):
                 pix = page.get_pixmap(dpi=args.dpi, colorspace=pymupdf.csRGB, alpha=False)
-                temp = image_path.with_suffix(".tmp.png")
-                pix.save(temp)
+                temp = image_path.with_suffix(".tmp" + extension)
+                # Encode the rendered RGB page once, with explicit DPI and codec.
+                with Image.frombytes("RGB", (pix.width, pix.height), pix.samples) as image:
+                    image_encoding.save(image, temp, args.image_encoding, args.dpi)
                 os.replace(temp, image_path)
                 rendered[str(index)] = {"sha256": sha256(image_path)}
                 save_json(render_state_path, {"pages": rendered})
@@ -185,11 +193,11 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
         manifest = generation / "inputs.json"
         source_hash = sha256(source)
         save_json(manifest, {"schema_version": 1, "files": [
-            {"path": str(images / f"{i+1:05d}.png"),
+            {"path": str(images / f"{i+1:05d}{extension}"),
              "stable_id": hashlib.sha256(f"{source_hash}:{i+1}".encode()).hexdigest()}
             for i in range(original.page_count)]})
         command = [str(args.cli), args.command, "--manifest", str(manifest), "--output", str(processed),
-                   "--dpi", str(args.dpi), "--jobs", str(args.jobs)]
+                   "--dpi", str(args.dpi), "--jobs", str(args.jobs), *image_encoding.arguments(args.image_encoding)]
         for key in ("review_policy", "max_angle", "min_page_ratio"):
             if getattr(args, key) is not None:
                 command += ["--" + key.replace("_", "-"), str(getattr(args, key))]
@@ -222,7 +230,7 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
         result_pdf = pymupdf.open()
         try:
             for index, (width, height) in enumerate(dimensions):
-                image_path = images / f"{index+1:05d}.png"
+                image_path = images / f"{index+1:05d}{extension}"
                 records = by_input.get(str(image_path.resolve()).casefold(), [])
                 source_to_output[index+1] = result_pdf.page_count + 1
                 sides = [r.get("subpage", "single") for r in records]
@@ -302,6 +310,10 @@ def main() -> int:
     parser.add_argument("--cli", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--config", type=Path)
+    parser.add_argument("--image-format", choices=("png", "tiff", "jpeg"))
+    parser.add_argument("--png-compression", type=int)
+    parser.add_argument("--tiff-compression", choices=("none", "lzw", "deflate"))
+    parser.add_argument("--jpeg-quality", type=int)
     parser.add_argument("--dpi", type=int, default=300)
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument("--page-size", choices=("original", "processed"), default="original")
@@ -348,6 +360,7 @@ def main() -> int:
         parser.error("Output must not contain an input PDF")
     root.mkdir(parents=True, exist_ok=True)
     config_hash = ""
+    config = {}
     if args.config:
         args.config = args.config.resolve()
         config = load_json(args.config)
@@ -357,6 +370,16 @@ def main() -> int:
         if reserved.intersection(config):
             parser.error("PDF config must not override paths, dpi, jobs or resume/overwrite")
         config_hash = sha256(args.config)
+    try:
+        configured = config.get('image_encoding', {}) if config.get('schema_version') == 2 else {
+            k: config[flag] for k, flag in (('format', 'image-format'), ('png_compression', 'png-compression'),
+                                           ('tiff_compression', 'tiff-compression'), ('jpeg_quality', 'jpeg-quality')) if flag in config}
+        image_encoding.resolve(configured)  # Reject invalid saved policies before overlaying flags.
+        args.image_encoding = image_encoding.resolve(configured, {
+            'format': args.image_format, 'png_compression': args.png_compression,
+            'tiff_compression': args.tiff_compression, 'jpeg_quality': args.jpeg_quality})
+    except (ValueError, TypeError) as error:
+        parser.error(str(error))
     if explicit_files is not None:
         if args.recursive: parser.error("--recursive only applies to --pdf-dir")
         files = explicit_files
