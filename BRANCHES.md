@@ -93,7 +93,7 @@
       "domain": "CLI/PDF image encoding",
       "business_change": "CLI/PDF rendered and processed page images now default to PNG level 6 instead of fixed render PNG plus processed TIFF. PNG 0-9, TIFF none/LZW/Deflate and JPEG quality 1-100 are configurable and saved in presets/snapshots. Encoding changes invalidate resume caches while retaining ownership across format changes. PNG lossless preserve fallback, original PDF fallback and GUI TIFF caches remain; JPEG rejects selected transparent layer output. Schema 1/2 overrides supported.",
       "date": "2026-09-12",
-      "status": "implemented_unmerged",
+      "status": "integrated_local_master",
       "id": "image-encoding",
       "request": "0912-image-encoding/req-execute",
       "evidence": [
@@ -104,11 +104,12 @@
         "scripts/scantailor_menu/workbench.py",
         "docs/VERIFICATION.md"
       ],
-      "implementedAt": "2026-09-12T14:26:22+08:00"
+      "implementedAt": "2026-09-12T14:26:22+08:00",
+      "integratedAt": "2026-09-13T23:11:09.6072948+08:00"
     }
   ],
   "format": 1,
   "pending": [
-    "0912-image-encoding/op-merge"
+    "0912-image-encoding/op-push"
   ]
 }

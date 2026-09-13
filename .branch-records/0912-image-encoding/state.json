@@ -9,7 +9,8 @@
     "tests/workbench_integration.py",
     "tests/menu_integration.py",
     "Independent encoding_bugbot review found 3 P2 issues; all fixed and covered by test_review_*",
-    "11 encoding, 20 full native including GUI, 5 CTest, 9 workbench, 8 menu passed; isolated portable 11 encoding, 19 workflow plus one GUI skip, 9 workbench, 8 menu and 3 PowerShell codec runs passed"
+    "11 encoding, 20 full native including GUI, 5 CTest, 9 workbench, 8 menu passed; isolated portable 11 encoding, 19 workflow plus one GUI skip, 9 workbench, 8 menu and 3 PowerShell codec runs passed",
+    "Local master fast-forward verified at 0e77644de8c1cc22a43f40196bf7837e14b5f3e4 with clean worktree before push predeclaration"
   ],
   "requirements": [
     "PNG/TIFF/JPEG intermediate page encoding; PNG lossless level 6 default",
@@ -27,7 +28,7 @@
     "Native/PDF/split/GUI/resume/workbench regressions pass"
   ],
   "status": "active",
-  "next": "Commit verified implementation including op-merge, fast-forward local master, predeclare/commit/push origin/master, verify remote SHA and finalize local ZIP provenance.",
-  "integration": "unmerged",
+  "next": "Execute op-push after committing this predeclaration. Reconcile pending pointer with origin/master and provider SHA before any retry; finalize local ZIP provenance. No success-backfill-only commit/push.",
+  "integration": "verified",
   "purpose": "Configurable intermediate page image encoding with PNG default"
 }
