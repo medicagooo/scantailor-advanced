@@ -185,7 +185,7 @@ class EncodingTests(unittest.TestCase):
             self.assertEqual(len(report['pages'][0]['artifacts']),3)
 
     def test_workbench_encoding_draft_snapshot_and_load(self):
-        model=Controller(CLI,self.root/'jobs')
+        model=Controller(CLI, self.root / 'jobs', language='zh-Hans')
         model.apply({'schema_version':2,'image_encoding':{'format':'png','png_compression':0}})
         model.preview=(model.revision,'old')
         ui=Mock();ui.m=model
@@ -199,7 +199,7 @@ class EncodingTests(unittest.TestCase):
         model.apply({'schema_version':2,'image_encoding':chosen})
         self.assertIsNone(model.preview)
         saved=self.root/'preset.json';saved.write_text(json.dumps(model.config),encoding='utf-8')
-        other=Controller(CLI,self.root/'jobs2');other.apply(json.loads(saved.read_text(encoding='utf-8')))
+        other=Controller(CLI, self.root / 'jobs2', language='zh-Hans');other.apply(json.loads(saved.read_text(encoding='utf-8')))
         self.assertEqual(other.config,model.config)
         legacy.fixture(self.inputs/'001.png'); model.select('images',[self.inputs/'001.png']); model.output=str(self.root/'menu-output')
         model.launch=Mock();model.start()

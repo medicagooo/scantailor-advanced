@@ -4,6 +4,7 @@ No global hooks: Windows shortcuts belong to the terminal/OS. Console modes
 are restored even when a form or worker fails. Rendering uses an alternate VT
 buffer; untrusted filenames/logs are stripped of control characters.
 """
+from .i18n import tr
 import ctypes as C
 from ctypes import wintypes as W
 import shutil
@@ -65,14 +66,14 @@ class Console:
                 opened = True
                 break
         if not opened:
-            raise OSError('剪贴板暂时被其他程序占用，请再粘贴一次。')
+            raise OSError(tr('msg_001'))
         try:
             handle = self.user.GetClipboardData(13)  # CF_UNICODETEXT, read only.
             if not handle:
                 return ''
             pointer = self.api.GlobalLock(handle)
             if not pointer:
-                raise OSError('无法读取剪贴板文本。')
+                raise OSError(tr('msg_005'))
             try:
                 return C.wstring_at(pointer)
             finally:
@@ -194,7 +195,7 @@ class Console:
         for i, row in enumerate(rows[offset:offset + visible], offset):
             frame.button(2, 4 + i - offset, self.width - 5, row, i, selected=i == selected)
         frame.rule(2, self.height - 3, self.width - 5)
-        frame.text(2, self.height - 2, f'↑↓/Tab 选择   Enter/单击 打开   Esc 返回    {min(selected + 1, len(rows))}/{len(rows)}', MUTED)
+        frame.text(2, self.height - 2, f"{tr('msg_002')}{min(selected + 1, len(rows))}/{len(rows)}", MUTED)
         self.draw(frame)
         return offset
 
@@ -224,8 +225,9 @@ class Console:
                     if action == 'click':
                         return index
 
-    def text(self, title, initial='', hint='', numeric=False, multiline=False, validator=None, apply_label='确定'):
+    def text(self, title, initial='', hint='', numeric=False, multiline=False, validator=None, apply_label='msg_000'):
         self.flush()
+        apply_label = tr(apply_label)
         editor = Editor(str(initial), multiline=multiline, numeric=numeric)
         if initial:
             editor.select_all()
@@ -234,8 +236,8 @@ class Console:
             self.dimensions()
             frame = Frame(self.width, self.height)
             if self.width < 48 or self.height < 18:
-                frame.text(2, 2, '请放大窗口以编辑内容', ACCENT)
-                frame.text(2, 4, '已输入的内容会保留；Esc 取消。', MUTED)
+                frame.text(2, 2, tr('msg_006'), ACCENT)
+                frame.text(2, 4, tr('msg_007'), MUTED)
                 self.draw(frame)
                 event = self.read()
                 if event and event[0] == 'escape':
@@ -243,8 +245,8 @@ class Console:
                 continue
             width = max(8, self.width - 8)
             frame.text(3, 1, title, ACCENT)
-            frame.text(3, 3, hint or '支持中文、空格和带引号的路径', MUTED)
-            frame.rule(3, 5, width, '输入内容')
+            frame.text(3, 3, hint or tr('msg_008'), MUTED)
+            frame.rule(3, 5, width, tr('msg_003'))
             before = editor.value[:editor.cursor]
             line_number = before.count('\n')
             all_lines = editor.value.split('\n')
@@ -271,11 +273,11 @@ class Console:
                     frame.text(4 + cells(visible[:caret]), 6 + n, '▏', ACCENT, 1)
             button_y = min(self.height - 5, 12 if multiline else 9)
             frame.rule(3, button_y - 2, width)
-            frame.text(3, button_y - 1, error or ('已全选，输入或粘贴将替换内容' if editor.anchor is not None else 'Ctrl+A 全选 · ←→ Home/End 移动 · Shift+方向键选择'), WARN if error else MUTED)
+            frame.text(3, button_y - 1, error or (tr('msg_010') if editor.anchor is not None else tr('msg_011')), WARN if error else MUTED)
             frame.button(3, button_y, min(22, width // 2), apply_label, 'apply', focus == 1)
-            frame.button(3 + min(23, width // 2), button_y, min(20, width // 2), '取消', 'cancel', focus == 2)
+            frame.button(3 + min(23, width // 2), button_y, min(20, width // 2), tr('msg_004'), 'cancel', focus == 2)
             frame.hits.append((3, 6, width, 4 if multiline else 1, 'field'))
-            frame.text(3, self.height - 2, 'Ctrl+V / Shift+Insert / 右键粘贴 · ' + ('Ctrl+Enter 确认 · Enter 换行' if multiline else 'Enter 确认') + ' · Esc 取消', MUTED)
+            frame.text(3, self.height - 2, tr('msg_012') + (tr('msg_013') if multiline else tr('msg_014')) + tr('msg_009'), MUTED)
             self.draw(frame)
             event = self.read(text=True)
             if not event:
@@ -306,7 +308,7 @@ class Console:
             elif action == 'paste':
                 try:
                     if not editor.insert(self.clipboard()):
-                        error = '粘贴内容不符合数字格式或超过长度限制。'
+                        error = tr('msg_015')
                     else:
                         error, focus = '', 0
                 except OSError as problem:

@@ -1,0 +1,29 @@
+{
+  "purpose": "Three-language CLI workbench with system detection, saved manual selection and multilingual README images",
+  "requirements": [
+    "Implement accepted en/zh-Hans/zh-Hant plan, default auto; manual language in All settings",
+    "Language-only changes preserve task identity, inputs, cached outputs and processing settings",
+    "Translate interface and preview controls; preserve machine protocol and original diagnostics",
+    "Review bugs and repair; regenerate language images, update README and push master"
+  ],
+  "constraints": [
+    "Windows native; preserve current files",
+    "Screen captures must be truthful; label renderer illustrations if native capture unavailable",
+    "Normal master push with predeclared operations"
+  ],
+  "acceptance": [
+    "Locale mapping and override precedence tested",
+    "All translation placeholders covered; three layouts verified",
+    "Persistence/restart and task identity regressions pass",
+    "Bugbot fixes tested; portable build and archive verified; remote master SHA verified"
+  ],
+  "status": "active",
+  "integration": "unmerged",
+  "evidence": [
+    "docs/VERIFICATION.md",
+    ".branch-records/0914-cli-languages/verification.md",
+    "tests/language_integration.py",
+    "tests/language_viewer_integration.js"
+  ],
+  "next": "Commit implementation, fast-forward master, verify portable archive, predeclare and push master."
+}

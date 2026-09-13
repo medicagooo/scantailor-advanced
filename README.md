@@ -5,9 +5,9 @@
 <h1 align="center">ScanTailor CLI</h1>
 <p align="center"><strong>Batch-clean scanned pages and PDFs with the ScanTailor Advanced engine.</strong></p>
 <p align="center">Headless commands · Guided terminal workbench · Local processing</p>
-<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a></p>
 
-ScanTailor CLI adds scriptable document processing to **ScanTailor Advanced**. Deskew scans, split facing pages, adjust page boundaries and margins, and produce consistent image or PDF output. Use commands for repeatable batches, or the Chinese terminal workbench for guided setup and preview. The desktop GUI remains available for manual corrections.
+ScanTailor CLI adds scriptable document processing to **ScanTailor Advanced**. Deskew scans, split facing pages, adjust page boundaries and margins, and produce consistent image or PDF output. Use commands for repeatable batches, or the multilingual terminal workbench for guided setup and preview. The desktop GUI remains available for manual corrections.
 
 The processing engine runs locally, without a cloud service or API key. OCR is outside its scope.
 
@@ -19,9 +19,9 @@ The processing engine runs locally, without a cloud service or API key. OCR is o
   <a href="#documentation">Documentation</a>
 </p>
 
-![CLI workbench with input, output, processing options and PNG compression settings](docs/images/cli-workbench.png)
+![English CLI workbench: input, output, processing options and PNG compression](docs/images/en/cli-workbench.png)
 
-*The Chinese workbench, rendered from the actual CLI layout. Example paths are illustrative; this is not a desktop screen capture. [Image provenance and reproduction](docs/images/README.md).*
+*The English workbench, rendered from the actual CLI layout. Example paths are illustrative; this is not a desktop screen capture. [Image provenance and reproduction](docs/images/README.md).*
 
 ## What it does
 
@@ -134,18 +134,37 @@ Save this as `encoding.json` and pass `--config .\encoding.json`, or `-Config .\
 .\scantailor-cli.exe menu
 ```
 
-The workbench currently uses **Chinese labels**; automation commands use English option names. Double-clicking `scantailor-cli.exe` also opens the workbench in an interactive console.
+The workbench supports **English, 简体中文 and 繁體中文**. It follows Windows preferred display languages by default; unsupported languages fall back to English. Automation commands retain English option names and stable JSON fields. Double-clicking `scantailor-cli.exe` also opens the workbench in an interactive console.
 
-1. **输入文件 — Input:** paste a file/folder path, browse files, or select a folder. Quoted paths, spaces and Chinese names are supported. In the multi-line path field, Enter inserts a newline; **Ctrl+Enter** confirms.
-2. **保存位置 — Output:** choose a dedicated result folder.
-3. **处理方案 — Settings:** select a conservative preset or edit common/advanced settings. Changes take effect only after applying the draft.
-4. **预览几页 — Preview:** inspect the local comparison before choosing **开始处理 — Process** for the complete batch.
+1. **Input files:** paste a file/folder path, browse files, or select a folder. Quoted paths, spaces and Chinese names are supported. In the multi-line path field, Enter inserts a newline; **Ctrl+Enter** confirms.
+2. **Output folder:** choose a dedicated result folder.
+3. **Processing settings:** select a conservative preset or edit common/advanced settings. Changes take effect only after applying the draft.
+4. **Quick preview:** inspect the local comparison before choosing **Process all** for the complete batch.
 
-The overview separates PDF render/input DPI from output DPI. Applied settings, including DPI, concurrency and image encoding, are saved automatically to `%LOCALAPPDATA%/ScanTailorCLI/menu/settings.json` and restored on the next launch. Page-specific rules and manual geometry remain in task snapshots, so they are not accidentally applied to another document. Completed tasks automatically move to the result menu and stop accruing elapsed time. Use **任务记录 — History** to inspect or resume an existing task. Before execution, the workbench explains the selected source count, stage and changed settings. It offers existing valid results for duplicates, asks whether to continue interrupted tasks, and requires confirmation before overwriting. Resume uses the original task settings and operation; it does not adopt current form edits or turn a preview into a full batch.
+The overview separates PDF render/input DPI from output DPI. Applied settings, including DPI, concurrency and image encoding, are saved automatically to `%LOCALAPPDATA%/ScanTailorCLI/menu/settings.json` and restored on the next launch. Page-specific rules and manual geometry remain in task snapshots, so they are not accidentally applied to another document. Completed tasks automatically move to the result menu and stop accruing elapsed time. Use **History** to inspect or resume an existing task. Before execution, the workbench explains the selected source count, stage and changed settings. It offers existing valid results for duplicates, asks whether to continue interrupted tasks, and requires confirmation before overwriting. Resume uses the original task settings and operation; it does not adopt current form edits or turn a preview into a full batch.
 
-![CLI image encoding dialog showing PNG format and compression level 6](docs/images/cli-image-encoding.png)
+![CLI image encoding dialog showing PNG format and compression level 6](docs/images/en/cli-image-encoding.png)
 
-*Image encoding panel, rendered from the production dialog layout.* Open **处理方案 → 自定义常用设置 → 中间图片格式与压缩**. Select the format and compression, choose **应用**, then **应用设置** in the outer form. Cancelling either draft leaves the task settings unchanged. See the [workbench guide](docs/MENU.md) for all controls.
+*Image encoding panel, rendered from the production dialog layout.* Open **Common → Image format and compression**. Select the format and compression, choose **Apply**, then **Apply settings** in the outer form. Cancelling either draft leaves the task settings unchanged. See the [workbench guide](docs/MENU.md) for all controls.
+
+### Interface language
+
+Open **Settings → Language / 语言 / 語言** and select **System**, **English**, **简体中文** or **繁體中文**. The choice takes effect immediately and is saved in the existing user settings file. Processing presets, task identity and cached results remain unchanged. You can reach Settings before selecting an input file.
+
+![Language selection in the English CLI](docs/images/en/cli-language.png)
+
+For a one-launch override (does not replace your saved choice):
+
+```powershell
+.\scantailor-cli.exe menu --language en
+.\scantailor-cli.exe menu --language zh-Hans
+.\scantailor-cli.exe menu --language zh-Hant
+.\scantailor-cli.exe menu --language auto
+```
+
+Script tags take precedence over region: `zh-Hans` uses Simplified Chinese; `zh-Hant`, Taiwan, Hong Kong and Macao use Traditional Chinese; mainland China and Singapore use Simplified Chinese. Other supported preferred languages are considered in Windows order before falling back to English. Raw native diagnostics and machine-readable values remain available unchanged. The local HTML comparison has its own three-language selector and does not reprocess pages when changed.
+
+See the [Simplified Chinese guide and images](README.zh-CN.md) or [Traditional Chinese guide and images](README.zh-TW.md).
 
 ## Review, resume and automation
 

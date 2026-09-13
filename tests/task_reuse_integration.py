@@ -2,6 +2,7 @@
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -12,7 +13,7 @@ from unittest.mock import Mock
 from PIL import Image, ImageDraw
 import pymupdf
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT/'scripts'))
+sys.path.insert(0, os.environ.get('SCANTAILOR_MENU_ROOT', str(ROOT/'scripts')))
 from scantailor_menu.model import Controller
 from scantailor_menu.persistence import portable_config, outcome_complete
 from scantailor_menu.ui import UI
@@ -31,7 +32,7 @@ class LifecycleTests(unittest.TestCase):
         self.config = self.root/'config.json'
         self.settings = {'schema_version':2,'defaults':{'deskew':{'mode':'off'},'content':{'page_mode':'off','content_mode':'off'}}}
         self.config.write_text(json.dumps(self.settings))
-        self.m = Controller(CLI,self.root/'store')
+        self.m = Controller(CLI, self.root / 'store', language='zh-Hans')
         self.m.select('images',sorted(self.source.glob('*.png')))
         self.m.output=str(self.root/'output'); self.m.update_options({'dpi':100})
         self.m.apply(self.settings)
@@ -59,7 +60,7 @@ class LifecycleTests(unittest.TestCase):
         self.m.apply(config); self.m.update_options({'dpi':150,'jobs':3})
         self.assertEqual(self.m.dpi_summary('input'),'150')
         self.assertEqual(self.m.dpi_summary('output'),'600')
-        loaded=Controller(CLI,self.root/'store')
+        loaded=Controller(CLI, self.root / 'store', language='zh-Hans')
         self.assertEqual(loaded.options['dpi'],150); self.assertEqual(loaded.options['jobs'],3)
         loaded.select('images',[self.source/'001.png'])
         self.assertEqual(loaded.config['defaults']['output']['dpi'],[600,600])
@@ -72,7 +73,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(loaded.config['defaults']['input']['dpi'],[200,200])
         self.assertEqual(loaded.options['dpi'],200)
         loaded.preferences_path.write_text('{bad json')
-        recovered=Controller(CLI,self.root/'store')
+        recovered=Controller(CLI, self.root / 'store', language='zh-Hans')
         self.assertTrue(recovered.preference_error)
         self.assertEqual(recovered.options['dpi'],300)
 

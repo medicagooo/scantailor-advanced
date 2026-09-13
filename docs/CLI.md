@@ -360,3 +360,8 @@ Qt PNG 压缩值映射依据 [Qt 6.8.3 QPNG 源码](https://github.com/qt/qtbase
 - 新增 JSONL `source_sample`、`page_render_reused`、`phase_reused` 和 `task_reused`；保留原有 `page_reused` 兼容事件。完整任务复用还校验生成文件与外部保存项目；损坏缓存不是成功结果。
 
 工作台在执行前显示源页数量、阶段、配置差异及可能的重算范围；缓存阶段的准确命中数由执行时验证确定。重复完成任务默认打开结果；未完成任务可继续原快照或确认重做；覆盖另需确认。原生无交互命令仍使用 `--resume` / `--overwrite`，不增加隐藏提示。
+
+
+### CLI 3.4：工作台语言
+
+`scantailor-cli.exe menu --language en|zh-Hans|zh-Hant|auto` 指定本次启动界面语言；省略时使用已保存偏好，旧配置默认 auto。auto 按 Windows 当前用户首选显示语言匹配，不使用键盘布局或区域数字格式。手动修改位于工作台「全部设置 → 语言 / Language」，立即保存到现有 settings.json 的 ui.language。语言偏好不属于 schema 2 处理配置，也不参与任务身份、revision 或缓存失效。批处理命令、JSONL 字段/状态和原始诊断保持原有协议。HTML 对照页具有独立语言选择器，切换只改变页面控件。

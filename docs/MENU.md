@@ -1,4 +1,4 @@
-# CLI 3.3 中文工作台
+# CLI 3.4 多语言工作台
 
 双击 `scantailor-cli.exe`，或运行 `scantailor-cli.exe menu`。便携包自带 Python；源码构建可指定 `menu --python <python.exe>`。自动化命令继续输出 JSONL，无参数且输入输出重定向时不会打开菜单。
 
@@ -61,3 +61,12 @@ PNG 默认等级 6，可输入 0–9；TIFF 可选无压缩/LZW/Deflate；JPEG �
 新任务的最终 PDF 位于所选目录根部；其余内容在 `_scantailor/` 下。已完成且校验通过的重复任务可直接打开结果；中断/缺失结果可继续，设置有变化时展示差异并可选择旧任务快照。覆盖只替换本次目标，最终 PDF 验证后发布；不会清空整个输出目录。阶段分析和预览也先显示计划并确认，再按校验结果复用已有阶段；运行日志会列出实际复用情况。
 
 「继续未完成任务（沿用当时设置）」沿用该次任务的输入、完整设置、输出位置和操作类型；它不使用当前表单的新设置，预览也仍是预览。完成任务对应入口为「校验并补齐结果（沿用当时设置）」。需要使用新设置时回到工作台发起新任务；需要整本 PDF 时选择「开始处理」。
+
+
+## 界面语言（CLI 3.4）
+
+「全部设置 → 语言 / Language」提供跟随系统、English、简体中文、繁體中文，未导入文件时也可访问。选中后立即生效并保存到 settings.json 的 `ui.language`；处理设置的重置不重置界面语言。Windows 当前用户首选显示语言按顺序匹配，文字体系优先于地区；无匹配时使用英文。
+
+`scantailor-cli.exe menu --language en|zh-Hans|zh-Hant|auto` 只覆盖本次启动，普通参数保存不会将该临时覆盖写入偏好。旧偏好没有 ui.language 时使用 auto。语言与运行选项、任务快照、revision 和处理身份分开管理，手动切换不会清空预览或重算页面。历史状态和方案使用固定标识，在显示时翻译；原始输入、日志、JSON 字段和 CLI 参数不会作为任意文本翻译。
+
+`i18n.py` 管理 Windows 检测与资源回退，`locales/en.json`、`zh-Hans.json`、`zh-Hant.json` 保存固定消息标识和译文。`model.Controller.set_language` 保存独立偏好，`ui.UI.choose_language` 提供入口，`workbench.Workbench` 按当前语言重绘。HTML 对照页内置三种语言，选择器只更新本地页面控件，原始诊断保留。英文与繁体布局也由实际 Frame 渲染生成配图，来源见 docs/images/README.md。

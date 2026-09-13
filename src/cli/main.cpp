@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     return cli::launchMenu(entryArgs.mid(2));
   QCoreApplication::setApplicationName("scantailor-cli");
   QCoreApplication::setOrganizationName("ScanTailorCLI");
-  QCoreApplication::setApplicationVersion("3.3.0");
+  QCoreApplication::setApplicationVersion("3.4.0");
   QSettings::setDefaultFormat(QSettings::IniFormat);
   QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
   QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, settingsDir.path());
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   try {
     if (!parser.parse(app.arguments())) fail(parser.errorText());
     if (parser.isSet("help")) { std::fputs(parser.helpText().toUtf8().constData(), stdout); return 0; }
-    if (parser.isSet("version")) { std::puts("scantailor-cli 3.3.0"); return 0; }
+    if (parser.isSet("version")) { std::puts("scantailor-cli 3.4.0"); return 0; }
     const QString command = parser.positionalArguments().join(' ');
     if (QStringList{"config schema", "capabilities", "doctor"}.contains(command))
       for (const auto& key : parser.optionNames()) if (key != "json") fail("Option --" + key + " does not apply to " + command);
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
     if (command == "doctor") {
       QStringList formats;
       for (const auto& f : QImageReader::supportedImageFormats()) formats << QString::fromLatin1(f);
-      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.3.0"}, {"qt_version", qVersion()},
+      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.4.0"}, {"qt_version", qVersion()},
                       {"platform", "offscreen"}, {"qt_image_formats", formats.join(",")},
                       {"core_image_formats", "png,jpeg,tiff"}, {"status", "ok"}});
       return 0;

@@ -4,10 +4,10 @@
 
 <h1 align="center">ScanTailor CLI</h1>
 <p align="center"><strong>用 ScanTailor Advanced 引擎，批量整理扫描图片和 PDF。</strong></p>
-<p align="center">无界面命令行 · 中文终端工作台 · 本地处理</p>
-<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
+<p align="center">无界面命令行 · 多语言终端工作台 · 本地处理</p>
+<p align="center"><a href="README.md">English</a> · <strong>简体中文</strong> · <a href="README.zh-TW.md">繁體中文</a></p>
 
-ScanTailor CLI 为 **ScanTailor Advanced** 增加可脚本化的文档处理能力：批量纠偏、拆分左右页、调整纸张边界和页边距，输出整理后的图片或 PDF。需要自动化时直接调用命令；希望逐步设置时使用中文终端工作台。桌面 GUI 保留，用于精细调整和人工复核。
+ScanTailor CLI 为 **ScanTailor Advanced** 增加可脚本化的文档处理能力：批量纠偏、拆分左右页、调整纸张边界和页边距，输出整理后的图片或 PDF。需要自动化时直接调用命令；希望逐步设置时使用多语言终端工作台。桌面 GUI 保留，用于精细调整和人工复核。
 
 图像处理在本地执行，无需云端服务或 API Key；项目不包含 OCR。
 
@@ -15,11 +15,11 @@ ScanTailor CLI 为 **ScanTailor Advanced** 增加可脚本化的文档处理能�
   <a href="#快速开始">快速开始</a> ·
   <a href="#pdf-批处理">PDF 批处理</a> ·
   <a href="#图片格式与压缩">图片格式与压缩</a> ·
-  <a href="#中文终端工作台">工作台图解</a> ·
+  <a href="#多语言终端工作台">工作台图解</a> ·
   <a href="#文档导航">文档导航</a>
 </p>
 
-![CLI 工作台：输入文件、保存位置、处理方案及 PNG 压缩设置](docs/images/cli-workbench.png)
+![CLI 工作台：输入文件、保存位置、处理方案及 PNG 压缩设置](docs/images/zh-Hans/cli-workbench.png)
 
 *中文工作台界面图，由 CLI 的实际布局代码渲染；路径为演示值，不是桌面实机截图。[图片来源与生成方法](docs/images/README.md)。*
 
@@ -128,13 +128,13 @@ PNG 压缩等级影响文件体积和编码时间，不影响像素质量。PDF 
 
 保存为 `encoding.json`，原生 CLI 使用 `--config .\encoding.json`，PDF 脚本使用 `-Config .\encoding.json`。显式命令行参数优先于 JSON 配置；已有 `.scan` 处理设置在未显式覆盖时保留。
 
-## 中文终端工作台
+## 多语言终端工作台
 
 ```powershell
 .\scantailor-cli.exe menu
 ```
 
-工作台当前使用**中文界面**，自动化命令使用英文参数名。交互式控制台中双击 `scantailor-cli.exe` 也可以进入工作台。
+工作台支持 **English、简体中文与繁體中文**，默认按 Windows 当前用户首选显示语言自动选择；没有匹配语言时使用英文。自动化命令的英文参数名和 JSON 字段保持稳定。交互式控制台中双击 `scantailor-cli.exe` 也可以进入工作台。
 
 1. **输入文件：** 粘贴文件/文件夹地址，或浏览选择。支持引号、空格和中文路径。多行地址框中 Enter 换行，**Ctrl+Enter** 确认。
 2. **保存位置：** 选择独立的结果目录。
@@ -143,9 +143,28 @@ PNG 压缩等级影响文件体积和编码时间，不影响像素质量。PDF 
 
 首页将 PDF 渲染/图片输入 DPI 与输出 DPI 分开显示。应用后的 DPI、并发、图片编码等设置自动保存到 `%LOCALAPPDATA%/ScanTailorCLI/menu/settings.json`，下次启动自动加载。按页规则与手动几何留在任务快照中，不会套用到另一份文档。任务完成后自动进入结果菜单，计时停止；通过**任务记录**查看或恢复已有任务。执行前会说明本次源页数、目标阶段及设置差异；重复任务可打开已验证结果，中断任务会询问是否继续，覆盖需要确认。继续任务沿用当时的输入、设置和操作，不采用当前表单修改，也不会把预览变为完整处理。
 
-![CLI 中间图片设置面板：PNG 格式与默认压缩等级 6](docs/images/cli-image-encoding.png)
+![CLI 中间图片设置面板：PNG 格式与默认压缩等级 6](docs/images/zh-Hans/cli-image-encoding.png)
 
 *由程序实际对话框布局渲染的图片编码面板。* 从**处理方案 → 自定义常用设置 → 中间图片格式与压缩**进入。选好格式与压缩后先点**应用**，再在外层点击**应用设置**。任一级取消均不会改变任务设置。完整操作见[工作台使用说明](docs/MENU.md)。
+
+### 界面语言
+
+进入**全部设置 → 语言 / Language**，选择**跟随系统、English、简体中文或繁體中文**。立即生效并自动保存；不会改变处理参数、任务身份、已有预览或缓存。尚未导入文件时也能进入全部设置。
+
+![简体中文 CLI 的语言选择界面](docs/images/zh-Hans/cli-language.png)
+
+也可仅为本次启动指定语言，不修改已保存的选择：
+
+```powershell
+.\scantailor-cli.exe menu --language en
+.\scantailor-cli.exe menu --language zh-Hans
+.\scantailor-cli.exe menu --language zh-Hant
+.\scantailor-cli.exe menu --language auto
+```
+
+识别时优先采用文字体系：`zh-Hans` 使用简体；`zh-Hant` 及台湾、香港、澳门使用繁体；中国大陆与新加坡使用简体。按 Windows 首选语言顺序匹配，均不支持时回退英文。底层原始诊断与机器可读值保留原样。HTML 对照页也有三语言选择器，切换不会重新处理页面。
+
+参阅 [English 使用说明与配图](README.md)或[繁體中文使用说明与配图](README.zh-TW.md)。
 
 ## 复核、恢复与自动化
 
@@ -221,7 +240,7 @@ python -m venv .venv
 | 文档 | 内容 |
 | --- | --- |
 | [CLI 与 PDF 完整参考](docs/CLI.md) | 命令、配置结构、几何参数、编码、兼容性与 PDF 规则。 |
-| [中文终端工作台](docs/MENU.md) | 输入、方案、预览、项目编辑和任务记录。 |
+| [多语言终端工作台](docs/MENU.md) | 输入、方案、预览、项目编辑和任务记录。 |
 | [CLI 功能覆盖](docs/CLI-COVERAGE.md) | GUI 功能与 CLI 入口的对应关系。 |
 | [验证记录](docs/VERIFICATION.md) | 已验证行为与已知限制。 |
 | [上游参考文档](docs/UPSTREAM-README.md) | 保留的上游功能历史与构建说明。 |

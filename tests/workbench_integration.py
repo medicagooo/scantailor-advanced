@@ -29,7 +29,7 @@ class WorkbenchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.model = Controller(CLI, self.root / 'jobs')
+        self.model = Controller(CLI, self.root / 'jobs', language='zh-Hans')
         self.ui = UI(None, self.model)
         self.workbench = Workbench(self.ui)
 
@@ -255,7 +255,7 @@ def clipboard_child(path, cli):
                 thread = feed(sequence + key(13, '\r', 8))
                 result['terminal_injected_multiline'] = c.text('终端注入多行文本', multiline=True) == 'aa中文\n\nbb'
                 thread.join()
-                model = Controller(cli, path.parent / ('screen-' + path.stem))
+                model = Controller(cli, path.parent / ('screen-' + path.stem), language='zh-Hans')
                 bench = Workbench(UI(c, model))
                 frame, _ = bench.frame(*c.dimensions())
                 c.draw(frame)
@@ -280,7 +280,7 @@ def workflow_child(path, cli):
     source.parent.mkdir()
     Image.new('RGB', (200, 300), 'white').save(source, dpi=(100, 100))
     before = hashlib.sha256(source.read_bytes()).hexdigest()
-    model = Controller(cli, path.parent / 'workflow-jobs')
+    model = Controller(cli, path.parent / 'workflow-jobs', language='zh-Hans')
     model.options['dpi'] = 100
     failures = []
     try:

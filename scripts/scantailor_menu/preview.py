@@ -1,5 +1,7 @@
 """Local comparison viewer for the current native/PDF preview reports only."""
+from .i18n import catalog, language, NAMES
 import json
+import re
 from pathlib import Path
 
 
@@ -31,14 +33,21 @@ button.active{background:#1a414d;border-color:#5bdbd1}nav{display:flex;gap:8px;a
 #info{padding:0 32px 16px;color:#8b9cb2}.pages{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:0 32px 32px}.pages.single{grid-template-columns:1fr}
 figure{margin:0;background:#182437;border:1px solid #314558;border-radius:12px;overflow:hidden}figcaption{padding:10px 16px}img{display:block;width:100%;height:72vh;object-fit:contain;background:#e8ecf0}figure[hidden]{display:none}body.zoom img{height:auto;object-fit:initial}
 @media(max-width:760px){.pages{grid-template-columns:1fr}header,nav{padding:16px}img{height:50vh}.pages{padding:0 16px 20px}}
-</style><header><div><h1>ScanTailor · 预览对比</h1><small>仅在本机查看 · 首、中、尾页抽样不代表整本文档均无异常</small></div><select id="page" aria-label="选择页面"></select></header>
-<nav><button data-mode="both" class="active">左右对比</button><button data-mode="original">只看原图</button><button data-mode="result">只看结果</button><button id="zoom">放大检查细节</button><button id="prev">上一页</button><button id="next">下一页</button></nav>
-<div id="info"></div><main class="pages"><figure id="original"><figcaption>原始扫描</figcaption><img alt="原始扫描图"></figure><figure id="result"><figcaption>处理结果</figcaption><img alt="处理后的页面"></figure></main>
-<script>const data=__DATA__;const picker=document.querySelector('#page');const info=document.querySelector('#info');
+</style><header><div><h1 id="heading"></h1><small data-i18n="preview.note">仅在本机查看 · 首、中、尾页抽样不代表整本文档均无异常</small></div><select id="page" aria-label="Select page"></select><select id="language" aria-label="Language"><option value="en">English</option><option value="zh-Hans">简体中文</option><option value="zh-Hant">繁體中文</option></select></header>
+<nav><button data-mode="both" class="active" data-i18n="preview.both">左右对比</button><button data-mode="original" data-i18n="preview.original">只看原图</button><button data-mode="result" data-i18n="preview.result">只看结果</button><button id="zoom" data-i18n="preview.zoom">放大检查细节</button><button id="prev" data-i18n="preview.prev">上一页</button><button id="next" data-i18n="preview.next">下一页</button></nav>
+<div id="info"></div><main class="pages"><figure id="original"><figcaption data-i18n="preview.source">原始扫描</figcaption><img alt="Original scan"></figure><figure id="result"><figcaption data-i18n="preview.output">处理结果</figcaption><img alt="Processed page"></figure></main>
+<script>const translations=__TRANSLATIONS__;const languages=document.querySelector('#language');languages.value=__LANGUAGE__;
+const t=key=>translations[languages.value][key]||translations.en[key]||key;
+function localize(){document.documentElement.lang=languages.value;document.title='ScanTailor · '+t('preview.title');document.querySelector('#heading').textContent=document.title;document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));document.querySelector('#page').setAttribute('aria-label',t('preview.pick'));document.querySelector('#original img').alt=t('preview.source');document.querySelector('#result img').alt=t('preview.output');}
+languages.onchange=()=>{localize();show()};localize();const data=__DATA__;const picker=document.querySelector('#page');const info=document.querySelector('#info');
 data.forEach((p,i)=>{const option=document.createElement('option');option.value=i;option.textContent=`${i+1} / ${data.length} · ${p.name}`;picker.append(option)});
-function show(){if(!data.length){info.textContent='没有可显示的预览图，请返回任务日志检查处理结果。';return}const p=data[Number(picker.value)];document.querySelector('#original img').src=p.original;document.querySelector('#result img').src=p.result;info.textContent=`${p.id} · ${p.status==='complete'?'完成':p.status==='review'?'需要复核':p.status} ${p.message}`;document.querySelector('#prev').disabled=picker.selectedIndex===0;document.querySelector('#next').disabled=picker.selectedIndex===data.length-1}
+function show(){if(!data.length){info.textContent=t('preview.empty');return}const p=data[Number(picker.value)];document.querySelector('#original img').src=p.original;document.querySelector('#result img').src=p.result;info.textContent=`${p.id} · ${p.status==='complete'?t('preview.complete'):p.status==='review'?t('preview.review'):p.status} ${p.message}`;document.querySelector('#prev').disabled=picker.selectedIndex===0;document.querySelector('#next').disabled=picker.selectedIndex===data.length-1}
 picker.onchange=show;document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{const mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));document.querySelector('#original').hidden=mode==='result';document.querySelector('#result').hidden=mode==='original';document.querySelector('main').classList.toggle('single',mode!=='both')});
 document.querySelector('#zoom').onclick=()=>document.body.classList.toggle('zoom');for(const [id,step] of [['prev',-1],['next',1]])document.querySelector('#'+id).onclick=()=>{picker.selectedIndex=Math.max(0,Math.min(data.length-1,picker.selectedIndex+step));show()};show();</script></html>'''
     target = output / 'preview.html'
-    target.write_text(html.replace('__DATA__', data), encoding='utf-8')
+    # One-pass template substitution: report strings are opaque, even when they
+    # contain token-like text such as __LANGUAGE__ or __TRANSLATIONS__.
+    substitutions = {'__DATA__': data, '__LANGUAGE__': json.dumps(language()),
+                     '__TRANSLATIONS__': json.dumps({name: {k:v for k,v in catalog(name).items() if k.startswith('preview.')} for name in NAMES}, ensure_ascii=False).replace('<', '\\u003c')}
+    target.write_text(re.sub(r'__DATA__|__LANGUAGE__|__TRANSLATIONS__', lambda match: substitutions[match.group()], html), encoding='utf-8')
     return target

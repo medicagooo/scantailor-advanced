@@ -4,6 +4,7 @@ The UI edits copies, then commits them. Each run writes its own manifest and
 configuration; resume reuses that snapshot instead of the current UI draft.
 """
 from __future__ import annotations
+from .i18n import tr, set_language, LANGUAGES
 import copy
 import json
 import math
@@ -77,7 +78,7 @@ def seed(schema):
 
 
 class Controller:
-    def __init__(self, cli, state_dir):
+    def __init__(self, cli, state_dir, language=None):
         self.cli = Path(cli).resolve()
         self.home = Path(state_dir).resolve()
         self.home.mkdir(parents=True, exist_ok=True)
@@ -96,11 +97,17 @@ class Controller:
         self.lock = threading.Lock()
         self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': 0, 'finished': None}
 
+        self.language_preference = 'auto'
+        self.language_override = language
         self.preference_error = ''
+        saved = {}
+        settings_error = ''
+        language_error = False
         self.preferences_path = self.home / 'settings.json'
         try:
             if self.preferences_path.exists():
                 saved = json.loads(self.preferences_path.read_text(encoding='utf-8-sig'))
+                if not isinstance(saved, dict): raise ValueError('Settings must be an object')
                 if saved.get('schema_version') != 1: raise ValueError('Unsupported settings version')
                 validate(self.schema, saved['config'])
                 self.config = portable_config(saved['config'])
@@ -109,10 +116,33 @@ class Controller:
         except (OSError, ValueError, KeyError, TypeError) as error:
             self.config = {'schema_version': 2}
             self.options = copy.deepcopy(self.default_options)
-            self.preference_error = '已保存设置无法读取，使用默认值：' + str(error)
+            settings_error = str(error)
+
+        # Resolve presentation after reading the same preference envelope; language
+        # is deliberately absent from run options, job snapshots and revision.
+        ui = saved.get('ui', {}) if isinstance(saved, dict) else {}
+        choice = ui.get('language', 'auto') if isinstance(ui, dict) else 'auto'
+        if choice not in LANGUAGES:
+            choice = 'auto'
+            language_error = True
+        self.language_preference = choice
+        set_language(self.language_override or choice)
+        if settings_error: self.preference_error = tr('msg_021') + settings_error
+        if language_error: self.preference_error += tr('language.invalid')
+
+    def set_language(self, choice):
+        if choice not in LANGUAGES: raise ValueError('Unsupported interface language')
+        previous = self.language_preference
+        self.language_preference = choice
+        try: self.save_preferences()
+        except OSError:
+            self.language_preference = previous
+            raise
+        self.language_override = None
+        set_language(choice)
 
     def save_preferences(self):
-        write_json(self.preferences_path, {'schema_version': 1, 'config': portable_config(self.config),
+        write_json(self.preferences_path, {'schema_version': 1, 'config': portable_config(self.config), 'ui': {'language': self.language_preference},
                    'options': {k: v for k, v in self.options.items() if k not in ('pages', 'existing_output', 'sample_pages')}})
 
     def update_options(self, values, persist=True):
@@ -140,28 +170,28 @@ class Controller:
     def input_dpi(self):
         value = self.config.get('defaults', {}).get('input', {}).get('dpi')
         if value and self.kind == 'pdf' and value[0] != value[1]:
-            raise ValueError('PDF 渲染 DPI 的横纵值必须相同')
+            raise ValueError(tr('msg_019'))
         return value or [self.options['dpi'], self.options['dpi']]
 
     def dpi_summary(self, section):
         if any(section in rule.get('settings', {}) and 'dpi' in rule['settings'][section] for rule in self.config.get('rules', [])):
-            return '按页配置'
+            return tr('msg_016')
         value = self.config.get('defaults', {}).get(section, {}).get('dpi')
         if value:
             return str(value[0]) if value[0] == value[1] else f'{value[0]}×{value[1]}'
-        if self.kind == 'project': return '沿用项目'
-        return str(self.options['dpi']) if section == 'input' else '跟随输入'
+        if self.kind == 'project': return tr('msg_017')
+        return str(self.options['dpi']) if section == 'input' else tr('msg_018')
 
     def plan(self, command='process', sample=False):
         if not self.inputs: raise ValueError('Choose input first')
         if not self.output: raise ValueError('Choose output directory first')
         if sample and self.config.get('rules'):
-            raise ValueError('快速抽样暂不支持按页规则，请选择指定阶段精确预览；执行前将确认全项目分析。')
+            raise ValueError(tr('msg_020'))
         sources = [{'path': str(p), 'sha256': digest(p)} for p in self.inputs]
         dependencies = []
         if self.kind == 'project':
             inspected = self.query(['pages', 'list', '--project', self.inputs[0]])[-1]
-            if inspected.get('import_errors'): raise ValueError('项目源图无法读取，请先修复路径')
+            if inspected.get('import_errors'): raise ValueError(tr('msg_022'))
             dependencies = [{'path': p, 'sha256': digest(p)} for p in dict.fromkeys(page['input'] for page in inspected['pages'])]
         request = {'kind': self.kind, 'inputs': sources, 'dependencies': dependencies,
                    'config': self.config, 'options': {k:v for k,v in self.options.items() if k not in ('existing_output','jobs')},
@@ -186,7 +216,7 @@ class Controller:
             if sample:
                 expression = self.options['sample_pages']
                 numbers = {1, count // 2 + 1, count} if expression == 'sample' else {int(v.strip()) for v in expression.split(',')}
-                if not numbers or min(numbers) < 1 or max(numbers) > count: raise ValueError('快速预览源页超出范围')
+                if not numbers or min(numbers) < 1 or max(numbers) > count: raise ValueError(tr('msg_023'))
                 selected.append(len(numbers))
             else: selected.append(count)
         key = identity(request)
@@ -348,19 +378,19 @@ class Controller:
                         continue
                     name = event.get('event', '')
                     if name == 'phase_reused':
-                        self.progress.update(done=event.get('total', 0), total=event.get('total', 0), stage=event.get('stage', '') + '（已复用）')
+                        self.progress.update(done=event.get('total', 0), total=event.get('total', 0), stage=event.get('stage', ''), reused=True)
                     elif name == 'phase_started':
-                        self.progress.update(done=0, total=event.get('total', 0), stage=event.get('stage', ''))
+                        self.progress.update(done=0, total=event.get('total', 0), stage=event.get('stage', ''), reused=False)
                     elif name == 'pdf_started':
-                        self.progress.update(current=event.get('input', ''), done=0, total=0, stage='正在打开 PDF')
+                        self.progress.update(current=event.get('input', ''), done=0, total=0, stage=tr('msg_026'), reused=False)
                     elif name in ('page_rendered', 'page_render_reused'):
-                        self.progress.update(current=event.get('input', ''), done=event.get('page', 0), total=event.get('total', 0), stage='准备预览图片')
+                        self.progress.update(current=event.get('input', ''), done=event.get('page', 0), total=event.get('total', 0), stage=tr('msg_027'), reused=False)
                     elif name == 'page_started':
                         self.progress.update(current=event.get('input', self.progress['current']))
                     elif name in ('page_finished', 'page_reused'):
                         self.progress['done'] = event.get('completed', self.progress['done'] + 1)
                     elif name == 'processing':
-                        self.progress.update(stage='图像处理与布局分析', done=0, total=0)
+                        self.progress.update(stage=tr('msg_028'), reused=False, done=0, total=0)
         code = process.wait()
         if code in (0, 1) and job['command'] == 'preview':
             try:
@@ -368,7 +398,7 @@ class Controller:
                 build_viewer(job['output'])
             except (OSError, ValueError, KeyError) as error:
                 with self.lock:
-                    self.lines.append('预览对比页生成失败：' + str(error))
+                    self.lines.append(tr('msg_024') + str(error))
         state = 'cancelled' if code == 130 else {0: 'complete', 1: 'review / partial failure'}.get(code, 'failed')
         finished = time.monotonic()
         with self.lock:

@@ -197,3 +197,15 @@ Implementation: `scripts/scantailor_menu/{model,persistence,ui,workbench}.py`, `
 - English/Chinese README examples and local links are checked. Updated overview illustration uses the actual production layout and has been visually inspected; it is explicitly labelled an illustration, not a desktop screenshot. User document images are not committed.
 
 Artifact: local `bin/ScanTailor-CLI-3.3.0-win64/` and sibling ZIP with file hashes and source-provenance metadata. No GitHub release upload or running-user installation is implied. Integration/publication evidence is recorded under `.branch-records/0914-task-reuse/`; Git operation intent alone is not success.
+
+## CLI 3.4 languages — verified 2026-09-14 (Asia/Singapore)
+
+English, Simplified Chinese and Traditional Chinese cover the workbench, settings, task results and HTML preview controls. Windows preferred UI languages select the default; explicit preferences persist independently of processing options. `menu --language` is a launch-only override. Raw diagnostics, paths, protocol keys and processing flags remain stable. See docs/MENU.md for the source-level contract.
+
+- Offline native build: all 5 CTest groups passed; CLI reports 3.4.0. Native CLI suites: 7 original and 20 full integration tests passed, including GUI project roundtrip.
+- Portable runtime: 12 language, 8 menu, 12 lifecycle/reuse, 5 completion and 11 encoding tests passed. Final language rerun passed all 12, including actual native launcher execution in all three languages. Final workbench rerun passed all 8 non-clipboard cases including actual keyboard workflow.
+- The remaining native clipboard-read case is environment-blocked: OpenClipboard(None) independently returns Windows error 5 (Access denied). This is not recorded as a pass; clipboard behavior was unchanged apart from translated messages.
+- Independent Bugbot review found three P2 defects, all repaired with regression tests: template substitution corrupting literal user data; stage names using the wrong translation context; reused-stage suffix preventing translation. Node executes generated preview JavaScript and checks three-language switching plus opaque report strings.
+- All nine locale-specific PNG illustrations were visually inspected. They export actual production layout; they are explicitly not desktop screenshots. Three README command examples match, and 90 local links resolve. Logs: build-native/languages-*.log; final reruns: languages-final.log and languages-final-workbench.log.
+
+Local portable artifact: bin/ScanTailor-CLI-3.4.0-win64 and sibling ZIP. Packaging provenance records its implementation commit and file hashes. No GitHub Release upload or replacement of a running installation is implied. Git publication must be verified against the remote ref; planned events are not success evidence.

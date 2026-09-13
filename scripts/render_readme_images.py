@@ -15,6 +15,7 @@ from scantailor_menu.console import Console
 from scantailor_menu.model import Controller
 from scantailor_menu.ui import UI
 from scantailor_menu.workbench import Workbench
+from scantailor_menu.i18n import NAMES
 
 
 def main():
@@ -22,9 +23,10 @@ def main():
     parser.add_argument('--cli', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--state-dir', type=Path, required=True)
+    parser.add_argument('--language', choices=list(NAMES), default='en')
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    model = Controller(args.cli, args.state_dir)
+    model = Controller(args.cli, args.state_dir, language=args.language)
     model.kind = 'pdf'
     model.inputs = [r'D:\Scans\test file.pdf']
     model.output = r'D:\Scans\clean'
@@ -36,17 +38,20 @@ def main():
 
     class CaptureConsole:
         width, height = 100, 15
+        output_name = "cli-image-encoding.png"
         def dimensions(self):
             return self.width, self.height
         def draw(self, frame):
-            render(frame, args.output / 'cli-image-encoding.png')
+            render(frame, args.output / self.output_name)
         def choose(self, title, rows, hint='', **kwargs):
-            Console.paint(self, title, rows, hint=hint)
+            Console.paint(self, title, rows, hint=hint, selected=kwargs.get("selected", 0))
             return None  # Capture the initial dialog, then cancel the local draft.
 
     bench.c = CaptureConsole()
     bench.encoding(model.config['image_encoding'])
-    print('Exported two PNGs from the CLI production layout.')
+    bench.c.output_name = 'cli-language.png'
+    UI(bench.c, model).choose_language()
+    print('Exported three PNGs from the CLI production layout.')
 
 
 if __name__ == '__main__':

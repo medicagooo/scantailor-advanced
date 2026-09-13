@@ -35,7 +35,7 @@ class MenuTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.m = Controller(CLI, self.root / 'menu')
+        self.m = Controller(CLI, self.root / 'menu', language='zh-Hans')
 
     def tearDown(self):
         if self.m.running:
@@ -235,7 +235,7 @@ def console_child(path, cli):
         t = feed(key(27, '\x1b'), delay=3)
         report['launcher'] = child.wait(timeout=20)
         t.join()
-        model = Controller(cli, path.parent / 'cancel-menu')
+        model = Controller(cli, path.parent / 'cancel-menu', language='zh-Hans')
         folder = model.new_folder()
         worker = folder / 'worker.py'
         worker.write_text('import signal,time,sys\nsignal.signal(signal.SIGBREAK, lambda *args: sys.exit(130))\nprint("ready", flush=True)\ntime.sleep(20)\n', encoding='utf-8')
