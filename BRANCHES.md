@@ -149,7 +149,7 @@
       "date": "2026-09-14",
       "domain": "CLI / localization",
       "businessChange": "CLI 3.4 adds English and Traditional Chinese alongside Simplified Chinese. Defaults to Windows user UI languages, falls back to English; All settings saves an immediate manual selection. Launch-only --language overrides do not change saved preferences. Language changes preserve processing configuration, task identity and cached results; preview controls switch locally. Three linked READMEs use locale-specific production-layout illustrations.",
-      "status": "implemented",
+      "status": "integrated_local",
       "request": "0914-cli-languages/req-implement",
       "evidence": [
         "docs/VERIFICATION.md",
@@ -158,12 +158,12 @@
         "tests/language_viewer_integration.js"
       ],
       "implementedAt": "2026-09-14T01:56:13.676561+08:00",
-      "integratedAt": null,
+      "integratedAt": "2026-09-14T01:57:41.233301+08:00",
       "deployedAt": null
     }
   ],
   "format": 1,
   "pending": [
-    "0914-cli-languages/op-merge"
+    "0914-cli-languages/op-push"
   ]
 }
