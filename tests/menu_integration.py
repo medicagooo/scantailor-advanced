@@ -155,7 +155,7 @@ class MenuTests(unittest.TestCase):
         self.m.start('preview')
         wait(self.m)
         self.assertIn(self.m.status, ('complete', 'review / partial failure'), self.m.lines)
-        report = json.loads((Path(self.m.last['output']) / 'batch-report.json').read_text(encoding='utf-8'))
+        report = json.loads((Path(self.m.last['output']) / '_scantailor' / 'batch-report.json').read_text(encoding='utf-8'))
         self.assertEqual({r['input'] for r in report['results']}, set(map(str, paths[:2])))
         self.assertEqual(len(list(Path(self.m.last['output']).rglob('project.scan'))), 2)
         self.assertEqual(hashes, [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths])

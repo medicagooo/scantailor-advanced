@@ -21,6 +21,7 @@ LABELS = {'defaults': '全局页面设置', 'project': '项目设置', 'rules': 
           'picture_zones': '图片区域', 'fill_zones': '填色区域', 'select': '作用范围', 'settings': '参数',
           'reading_direction': '阅读顺序', 'dpi': 'DPI', 'jobs': '并发数', 'pages': '输出页范围',
           'stage': '分析 / 预览阶段', 'page_size': 'PDF 页面尺寸', 'review_policy': '疑难页策略'}
+LABELS['sample_pages'] = '快速预览源页（sample 或 1,5,9）'
 LABELS.update(dict(image_encoding='中间图片', format='图片格式', png_compression='PNG 压缩等级', tiff_compression='TIFF 压缩方式', jpeg_quality='JPEG 质量'))
 LABELS.update(dict(rotation='顺时针旋转（度）', trim='初裁切', enabled='启用', left='左边', right='右边', top='上边', bottom='下边',
                   mode='处理模式', angle='纠偏角度（度）', oblique_mode='斜切模式', oblique_angle='斜切角度（度）',
@@ -289,6 +290,52 @@ class UI:
                 self.message('详细日志', logs)
                 self.c.flush()
 
+    def execute(self, command='process', sample=False):
+        plan = self.m.plan(command, sample)
+        previous = plan['match']
+        if previous:
+            complete = previous.get('outcome_complete', previous.get('status') == 'complete')
+            rows = ['打开已有结果' if complete and plan['valid'] else '继续未完成任务（沿用当时设置）', '覆盖重做', '取消']
+            hint = '输入与设置相同。' + ('已有结果校验通过。' if plan['valid'] else '已有结果需要校验，缺失或变化部分会重算。')
+            choice = self.c.choose('发现已有任务', rows, hint)
+            if choice is None or choice == 2: return
+            self.m.last = previous
+            if choice == 0 and complete and plan['valid']:
+                self.results(); return
+            if choice == 0:
+                self.m.start(resume=True); self.monitor(); return
+            decision = 'overwrite'
+        else:
+            decision = None
+            root = Path(self.m.output)
+            conflict = plan['conflict']
+            occupied = command == 'process' and root.exists() and any(root.iterdir())
+            hint = ('仅处理首、中、尾源页（或指定源页）；拆页后数量可增加，不计算整书统一布局。'
+                    if sample else '精确任务：需要完整项目的分析和布局。有效 PDF 渲染缓存将自动复用。')
+            stage = 'output' if command == 'process' else self.m.options['stage']
+            hint = f'共 {plan["source_count"]} 个源页，本次 {plan["selected_count"]} 个；阶段 {stage}。' + hint
+            if conflict:
+                hint += '\n设置差异：' + '；'.join(plan['changes'][:5])
+            hint += '\n复用数需校验缓存后确定；最坏需处理本次全部源页。'
+            self.message('执行计划', hint)
+            rows = ['确认执行', '取消']
+            if occupied:
+                rows = ['覆盖此输出目录中的任务结果', '取消']
+                hint += ' 输出目录已有文件；只替换本次目标，其他文件保留。'
+            if conflict and not conflict.get('outcome_complete', conflict.get('status') == 'complete'):
+                choice = self.c.choose('发现未完成的旧任务', ['继续旧任务（沿用当时设置）', '按当前设置重新处理', '取消'], '旧任务不采用本次配置修改。')
+                if choice == 0:
+                    self.m.last = conflict; self.m.start(resume=True); self.monitor(); return
+                if choice != 1: return
+            choice = self.c.choose('执行前确认', rows, hint.splitlines()[0])
+            if choice != 0: return
+            if occupied: decision = 'overwrite'
+        if decision == 'overwrite':
+            if self.c.choose('确认覆盖重做', ['取消', '确认覆盖本次目标'], '旧 PDF 在新结果验证成功后才替换。') != 1:
+                return
+        self.m.start(command, sample=sample, decision=decision)
+        self.monitor()
+
     def results(self):
         from .workbench import STATES
         if not self.m.last:
@@ -297,7 +344,7 @@ class UI:
         root = Path(self.m.last['output'])
         while True:
             viewer = root / 'preview.html'
-            rows = ['打开原图 / 结果对比' if viewer.exists() else '打开结果目录', '查看任务日志', '打开生成的项目', '打开复核 / 预览报告', '继续此任务（原始快照）']
+            rows = ['打开原图 / 结果对比' if viewer.exists() else '打开结果目录', '查看任务日志', '打开生成的项目', '打开复核 / 预览报告', '校验并补齐结果（沿用当时设置）' if self.m.last.get('status') == 'complete' else '继续未完成任务（沿用当时设置）']
             status = self.m.last.get('status', 'unknown')
             seconds = self.m.last.get('elapsed_seconds')
             hint = str(root)
@@ -320,6 +367,7 @@ class UI:
                     else:
                         os.startfile(files[index])
             elif choice == 4:
+                if self.c.choose('继续历史任务', ['继续', '取消'], '使用此任务当时的输入、设置和操作；不采用首页新配置，预览不会变成整批处理。') != 0: return
                 self.m.start(resume=True)
                 self.monitor()
                 return
@@ -478,17 +526,17 @@ class UI:
                  'review_policy': {'type': 'string', 'enum': ['preserve', 'report']},
                  'max_angle': {'type': 'number', 'minimum': 0, 'maximum': 45},
                  'min_page_ratio': {'type': 'number', 'minimum': .1, 'maximum': 1},
+                 'sample_pages': {'type': 'string', 'minLength': 1},
                  'existing_output': {'type': 'string', 'enum': ['reject', 'overwrite']}}
         if self.m.kind == 'pdf':
             props = {k: v for k, v in props.items() if k != 'pages'}
         current = {k: v for k, v in self.m.options.items() if k in props}
         ok, value = self.edit('运行选项', {'type': 'object', 'properties': props, 'required': list(props)}, current)
         if ok:
-            self.m.invalidate()
-            self.m.options.update(value)
+            self.m.update_options(value)
 
     def presets(self):
-        choice = self.c.choose('预设', ['保存当前设置', '载入 schema 2 配置', 'physics-safe', '清除覆盖 / 沿用项目'])
+        choice = self.c.choose('预设', ['保存当前设置', '载入 schema 2 配置', 'physics-safe', '清除覆盖 / 沿用项目', '恢复默认配置（含 DPI 与并发）'])
         if choice == 0:
             folder = self.m.new_folder()
             write_json(folder / 'preset.json', self.m.config)
@@ -497,6 +545,9 @@ class UI:
             files = self.browse({'.json'})
             if files:
                 self.m.apply(json.loads(files[0].read_text(encoding='utf-8-sig')))
+        elif choice == 4:
+            self.m.apply({'schema_version': 2})
+            self.m.update_options(self.m.default_options)
         elif choice in (2, 3):
             self.m.apply({'schema_version': 2, **({'preset': 'physics-safe'} if choice == 2 else {})})
 
@@ -509,7 +560,9 @@ def main():
     try:
         with Console() as console:
             model = Controller(args.cli, args.state_dir)
-            return UI(console, model).run()
+            ui = UI(console, model)
+            if model.preference_error: ui.message('设置加载提示', model.preference_error)
+            return ui.run()
     except (OSError, ValueError, RuntimeError) as error:
         print(str(error), file=sys.stderr)
         return 3

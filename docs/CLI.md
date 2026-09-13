@@ -40,11 +40,11 @@ PDF 入口默认渲染为 RGB PNG（无损压缩等级 6），支持配置 PNG/T
 输出内容：
 
 - `书名.deskew.pdf`：处理结果。
-- `batch-report.json`：每本书的结果、失败原因和复核入口。
-- `.work/<书籍ID>/<处理版本>/processed/report.json`：逐页状态与算法指标。
-- `.work/<书籍ID>/<处理版本>/review/index.html`：被标记页面的前后对照。
-- `.work/…/processed/project.scan`：可用 GUI 打开的项目。
-- `.work/…/events.jsonl`：CLI 进度记录。
+- `_scantailor/batch-report.json`：每本书的结果、失败原因和复核入口。
+- `_scantailor/.work/<书籍ID>/<处理版本>/processed/report.json`：逐页状态与算法指标。
+- `_scantailor/.work/<书籍ID>/<处理版本>/review/index.html`：被标记页面的前后对照。
+- `_scantailor/.work/…/processed/project.scan`：可用 GUI 打开的项目。
+- `_scantailor/.work/…/events.jsonl`：CLI 进度记录。
 
 中间文件用于恢复和复核，会占用额外磁盘空间，程序不自动删除它们。
 输出目录使用系统文件锁，进程异常退出后自动释放。
@@ -344,3 +344,19 @@ schema 2 设置文件示例（菜单保存/载入使用此格式）：
 `output::Task` 对页面及分层文件使用策略，内部缓存使用原 TIFF 写入器。`BatchRunner` 处理无损回退与报告。
 `process_pdf_folder.py` 和 `image_encoding.py` 负责 PDF 渲染及向原生 CLI 传递相同策略。
 Qt PNG 压缩值映射依据 [Qt 6.8.3 QPNG 源码](https://github.com/qt/qtbase/blob/v6.8.3/src/gui/image/qpnghandler.cpp)。
+
+
+### CLI 3.3：持久设置、任务确认与缓存
+
+工作台应用设置后自动写入 `%LOCALAPPDATA%/ScanTailorCLI/menu/settings.json`（版本 1 信封，包含 schema 2 配置和运行选项），启动时校验加载。原生自动化命令仍只使用显式配置/参数，不读取菜单偏好。输入/渲染 DPI 与输出 DPI 分开显示；PDF 的渲染 DPI 控制光栅化，schema 按源图输入 DPI 可另作尺寸标定。恢复默认设置也恢复 DPI 和并发。
+
+新 PDF 输出布局为根目录的 `<name>[稳定后缀].deskew.pdf`，辅助目录 `_scantailor/` 内包含 `.work/`、`cache/`、`analysis-cache/` 和 `batch-report.json`。最终 PDF 在新文件验证成功后才替换；旧 `.work`/根目录报告布局继续原地恢复，不自动迁移或清理。工作台的任务快照与操作结果也位于所选输出下的 `_scantailor/`；历史索引仍在菜单用户目录。
+
+- 原生快速预览：`preview --source-pages sample` 或 `--source-pages 1,5,9`，源页编号从 1 开始。拆页后可产生更多逻辑页；未选源页不进入处理阶段。快速模式禁止按页规则，避免重编号改变规则含义。
+- 精确预览：`preview --pages sample --stage output` 保留全项目分析和布局，仅导出首/中/尾逻辑页。省略抽样选项则输出全部页。`analyze --through deskew` 停在指定阶段。
+- PDF 快速预览：`python process_pdf_folder.py --pdf-dir <输入> --cli <程序> --output-dir <预览目录> --command preview --sample --source-pages sample`。只渲染选中源页，不生成最终 PDF。`--source-pages` 只能与 `--sample` 同用；该参数是 Python 入口选项。
+- `--analysis-cache <目录>` 可由原生 process/analyze/preview 共享。缓存键包括有序输入内容、程序、处理前序设置和稳定源 ID；只修改输出编码、颜色或二值化时可复用前序分析。源图、几何或布局配置变化会失效。覆写最终输出仍可复用有效前序阶段。
+- PDF 包装层 `--cache-dir <目录>` 共享渲染缓存；默认 `_scantailor/cache`。渲染键只依赖源内容、DPI、渲染器和编码配置；从抽样转完整任务只补渲染缺页。抽样与完整项目的全局布局不交叉复用。
+- 新增 JSONL `source_sample`、`page_render_reused`、`phase_reused` 和 `task_reused`；保留原有 `page_reused` 兼容事件。完整任务复用还校验生成文件与外部保存项目；损坏缓存不是成功结果。
+
+工作台在执行前显示源页数量、阶段、配置差异及可能的重算范围；缓存阶段的准确命中数由执行时验证确定。重复完成任务默认打开结果；未完成任务可继续原快照或确认重做；覆盖另需确认。原生无交互命令仍使用 `--resume` / `--overwrite`，不增加隐藏提示。

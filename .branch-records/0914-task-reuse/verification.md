@@ -1,0 +1,17 @@
+# CLI 3.3 execution checkpoint
+
+Objective: implement persistent settings, consistent DPI, managed PDF output, confirmed task reuse/recovery, source-only quick preview; include preceding completion UI and bilingual CLI README changes; review, repair and publish to existing master.
+
+Repository/worktree: D:/proj/scantailor-advanced; branch 0914-task-reuse; base d3ad0c5ea64bf733d71807c2f3e96c0f70e4ca60. Single registered worktree. Preceding local commits a085c089 (completion UI) and d3ad0c5e (README) descend from verified master/origin/master cde531034d27f89ca3d619af0b69fdebcea8a398. All pending source/document/test changes belong to this approved task; no unrelated dirt was found. Build/test/PDF/package artifacts remain ignored.
+
+Verified implementation and review evidence: docs/VERIFICATION.md, tests/task_reuse_integration.py and build-native/reuse-*.log. One independent Bugbot review found six bugs and all were repaired: ordered input identity, project image dependencies, portable manual modes, per-page input DPI, failed-task classification, external project reuse. Subsequent regression fixes retain legacy page_reused events, reject corrupt completion seals as cache hits, preserve valid stage cache during confirmed output replacement, and distinguish file collisions from existing output directories.
+
+72 Python tests and 5 CTest groups passed. Full workflow suite includes the actual GUI project roundtrip. Isolated portable validation passed lifecycle/workbench/completion/CLI/encoding/menu suites (52 tests) and the real PowerShell PDF codec test. Supplied nine-page PDF: quick sample 1/5/9 only; repeat fully reused; full run rendered only remaining six sources; all exit 0, source unchanged. Evidence build-native/reuse-user-pdf-33/verification.json. Output page dimensions and renderability verified by wrapper before publish.
+
+Artifacts: bin/ScanTailor-CLI-3.3.0-win64/ and planned sibling ZIP; final provenance/manifest tied to verified implementation commit at packaging checkpoint. This is a local distribution, not a GitHub release or installation into the user's running process. READMEs are English-first with Chinese switch and production-layout illustrations, explicitly not desktop captures.
+
+Locked decisions: remote target is existing master (user clarification); no force push, no manual CI operation, no source document edits. Existing legacy output layouts remain in place; new PDF outputs use root PDF plus _scantailor auxiliary directory. Resume keeps original configuration/operation. Quick sampling does not promise whole-book layout and rejects per-page rules; exact mode remains available. Phase hit counts are checked at execution, not guessed before confirmation. Native automation continues explicit --resume/--overwrite flags without hidden prompts.
+
+Remaining work: commit only task changes and recorded merge intent; fast-forward master; record verified integration and exact normal push intent in a pre-action registry commit; push origin master and verify remote SHA. Finish package provenance/manifest/ZIP and verify hashes before handoff. No implementation blocker or unresolved user decision remains.
+
+Next executable action: python scripts/validate_registry.py; git diff --check; stage the known task files, inspect staged content, commit, then git switch master and git merge --ff-only 0914-task-reuse (op-merge predeclared in events.jsonl).

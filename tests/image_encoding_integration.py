@@ -125,7 +125,7 @@ class EncodingTests(unittest.TestCase):
             cmd=[sys.executable,str(CLI.parent/'process_pdf_folder.py'),'--pdf-dir',str(source),'--cli',str(CLI),'--output-dir',str(out),'--dpi','120','--config',str(conf),'--image-format',fmt]
             result=subprocess.run(cmd,capture_output=True,encoding='utf-8')
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-            render=list((out/'.work').glob('*/*/input/*'))
+            render=list((out/'_scantailor/cache').glob('*/input/*'))
             self.assertEqual(len(render),1)
             with Image.open(render[0]) as image:
                 self.assertEqual(image.format,{'png':'PNG','tiff':'TIFF','jpeg':'JPEG'}[fmt])
@@ -133,7 +133,7 @@ class EncodingTests(unittest.TestCase):
             if fmt=='png':
                 result=subprocess.run(cmd+['--resume','--png-compression','0'],capture_output=True,encoding='utf-8')
                 self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-                self.assertEqual(len(list((out/'.work').glob('*/*/input/*.png'))),2)
+                self.assertEqual(len(list((out/'_scantailor/cache').glob('*/input/*.png'))),2)
             with pymupdf.open(out/'test.deskew.pdf') as pdf:
                 self.assertEqual(pdf.page_count,1)
                 self.assertEqual(tuple(pdf[0].rect),(0,0,240,320))

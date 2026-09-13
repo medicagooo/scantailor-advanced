@@ -7,9 +7,12 @@
     "0911-cli-workbench": ".branch-records/0911-cli-workbench/state.json",
     "0912-image-encoding": ".branch-records\\0912-image-encoding/state.json",
     "0913-completion-ui": ".branch-records/0913-completion-ui/state.json",
-    "0913-readme": ".branch-records\\0913-readme/state.json"
+    "0913-readme": ".branch-records\\0913-readme/state.json",
+    "0914-task-reuse": ".branch-records/0914-task-reuse/state.json"
   },
-  "active": [],
+  "active": [
+    "0914-task-reuse"
+  ],
   "changes": [
     {
       "status": "integrated",
@@ -121,8 +124,27 @@
       "business_change": "Completed tasks previously stayed on execution page while elapsed timer continued. CLI 3.2.1 freezes/persists duration and automatically opens result actions after worker/preview/checkpoint finalization. Complete, review, failed and cancelled states transition; cancelling still waits for actual exit. Old task records and existing preview outputs remain usable.",
       "status": "implemented_unmerged",
       "implementedAt": "2026-09-13T23:38:08.985529+08:00"
+    },
+    {
+      "domain": "CLI / task lifecycle",
+      "id": "task-reuse-001",
+      "request": "0914-task-reuse/req-plan",
+      "businessChange": "CLI 3.3 persists applied reusable defaults and separates render/input/output DPI. New PDF jobs place final PDFs at output root and auxiliary files under _scantailor; legacy layouts stay readable. Workbench confirms duplicate/partial/overwrite actions, resumes original snapshots, and verifies shared render/stage caches. Quick preview processes only selected source pages (default first/middle/last); exact full-project mode remains for layout and page rules. Supersedes cli-workbench-001 quick-preview behavior.",
+      "implementedAt": "2026-09-14T01:22:14.283792+08:00",
+      "deployedAt": null,
+      "evidence": [
+        ".branch-records\\0914-task-reuse\\state.json",
+        ".branch-records\\0914-task-reuse\\verification.md",
+        "docs/VERIFICATION.md",
+        "tests/task_reuse_integration.py"
+      ],
+      "status": "implemented_unmerged",
+      "date": "2026-09-14",
+      "integratedAt": null
     }
   ],
   "format": 1,
-  "pending": []
+  "pending": [
+    "0914-task-reuse/op-merge"
+  ]
 }

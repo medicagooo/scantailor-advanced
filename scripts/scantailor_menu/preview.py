@@ -6,6 +6,7 @@ from pathlib import Path
 def build_viewer(output):
     output = Path(output)
     batch = output / 'batch-report.json'
+    if not batch.exists(): batch = output / '_scantailor' / 'batch-report.json'
     reports = [output / 'report.json']
     if batch.exists():
         records = json.loads(batch.read_text(encoding='utf-8'))

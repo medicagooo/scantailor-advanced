@@ -20,20 +20,21 @@ class Workbench:
     def __init__(self, ui):
         self.ui, self.c, self.m = ui, ui.c, ui.m
         self.focus = 'paste'
-        self.scheme = '保真整理'
+        self.scheme = '自定义（已保存）' if self.m.config.get('defaults') else '保真整理'
         self.suggested_output = ''
 
     def select(self, kind, paths):
+        suggest = not self.m.output or self.m.output == self.suggested_output
         self.m.select(kind, paths)
         parent = Path(paths[0]).resolve().parent
-        if not self.m.output or self.m.output == self.suggested_output:
+        if suggest:
             target = parent / 'scantailor-output'
             suffix = 2
-            while target.exists() and (not target.is_dir() or any(target.iterdir())):
+            while target.exists() and not target.is_dir():
                 target = parent / f'scantailor-output-{suffix}'
                 suffix += 1
             self.m.output = self.suggested_output = str(target)
-        self.scheme = '沿用项目' if kind == 'project' else '保真整理'
+        self.scheme = '沿用项目' if kind == 'project' else ('自定义' if self.m.config.get('defaults') else '保真整理')
         self.focus = 'preview'
 
     def collect(self, text, recursive=False):
@@ -167,7 +168,7 @@ class Workbench:
             elif index == 6:
                 policy = draft.pop('_menu_policy', self.m.options['review_policy'])
                 self.m.apply(draft)
-                self.m.options['review_policy'] = policy
+                self.m.update_options({'review_policy': policy})
                 self.scheme = '自定义'
                 return
 
@@ -204,7 +205,7 @@ class Workbench:
             if choice == 1:
                 config['defaults'] = {'output': {'mode': 'bw'}}
             self.m.apply(config)
-            self.m.options['review_policy'] = 'preserve'
+            self.m.update_options({'review_policy': 'preserve'})
             self.scheme = ['保真整理', '黑白文档'][choice]
         elif choice == 2:
             self.common()
@@ -225,8 +226,7 @@ class Workbench:
         elif choice == 1:
             self.ui.options()
         elif choice in (2, 3):
-            self.m.start('analyze' if choice == 2 else 'preview')
-            self.ui.monitor()
+            self.ui.execute('analyze' if choice == 2 else 'preview')
         elif choice == 4:
             self.ui.presets()
 
@@ -282,7 +282,8 @@ class Workbench:
             current = self.m.running or (self.m.last and self.m.last.get('revision') == self.m.revision)
             status = STATES.get(self.m.status, self.m.status) if current else ('任务已就绪' if ready else '等待创建任务')
             frame.text(x + 1, 8, status, ACCENT, width - x - 4)
-            frame.text(x + 1, 10, f'输入分辨率   {self.m.options["dpi"]} DPI', FG)
+            frame.text(x + 1, 10, f'{"渲染 DPI" if self.m.kind == "pdf" else "输入 DPI"}     {self.m.input_dpi()[0] if self.m.kind == "pdf" else self.m.dpi_summary("input")}', FG)
+            frame.text(x + 1, 11, f'输出 DPI     {self.m.dpi_summary("output")}', FG)
             frame.text(x + 1, 12, f'同时处理     {self.m.options["jobs"]} 页', FG)
             frame.text(x + 1, 14, '疑难页       ' + ('保留原页' if self.m.options['review_policy'] == 'preserve' else '标记复核'), FG)
             encoding = image_encoding.resolve(self.m.config.get('image_encoding', {}))
@@ -364,11 +365,9 @@ class Workbench:
         elif key == 'advanced':
             self.advanced()
         elif key == 'preview':
-            self.m.start('preview', sample=True)
-            self.ui.monitor()
+            self.ui.execute('preview', sample=True)
         elif key == 'start':
-            self.m.start()
-            self.ui.monitor()
+            self.ui.execute()
         elif key == 'progress':
             self.ui.monitor()
         elif key == 'project':

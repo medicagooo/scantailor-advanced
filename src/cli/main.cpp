@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     return cli::launchMenu(entryArgs.mid(2));
   QCoreApplication::setApplicationName("scantailor-cli");
   QCoreApplication::setOrganizationName("ScanTailorCLI");
-  QCoreApplication::setApplicationVersion("3.2.1");
+  QCoreApplication::setApplicationVersion("3.3.0");
   QSettings::setDefaultFormat(QSettings::IniFormat);
   QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
   QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope, settingsDir.path());
@@ -64,9 +64,9 @@ int main(int argc, char** argv) {
   parser.addHelpOption();
   parser.addVersionOption();
   parser.addPositionalArgument("command", "menu, process, analyze, preview, review, project create/inspect/apply/edit, pages list, config schema/export, geometry map, capabilities, doctor");
-  const QStringList paths = {"input", "output", "project", "save-project", "config", "manifest", "save", "operations", "geometry"};
+  const QStringList paths = {"input", "output", "project", "save-project", "config", "manifest", "save", "operations", "geometry", "analysis-cache"};
   for (const auto& name : paths) parser.addOption({name, name + " path", "path"});
-  const QStringList strings = {"image-format", "tiff-compression", "preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp", "through", "stage", "pages", "review-policy"};
+  const QStringList strings = {"image-format", "tiff-compression", "preset", "deskew", "page-detection", "content-detection", "color-mode", "dewarp", "through", "stage", "source-pages", "pages", "review-policy"};
   for (const auto& name : strings) parser.addOption({name, name + " setting (see docs/CLI.md)", "value"});
   const QStringList numbers = {"png-compression", "jpeg-quality", "dpi", "output-dpi", "rotate", "deskew-angle", "margin-mm", "jobs", "max-angle", "min-page-ratio"};
   for (const auto& name : numbers) parser.addOption({name, name + " numeric value", "number"});
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   try {
     if (!parser.parse(app.arguments())) fail(parser.errorText());
     if (parser.isSet("help")) { std::fputs(parser.helpText().toUtf8().constData(), stdout); return 0; }
-    if (parser.isSet("version")) { std::puts("scantailor-cli 3.2.1"); return 0; }
+    if (parser.isSet("version")) { std::puts("scantailor-cli 3.3.0"); return 0; }
     const QString command = parser.positionalArguments().join(' ');
     if (QStringList{"config schema", "capabilities", "doctor"}.contains(command))
       for (const auto& key : parser.optionNames()) if (key != "json") fail("Option --" + key + " does not apply to " + command);
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
     if (command == "doctor") {
       QStringList formats;
       for (const auto& f : QImageReader::supportedImageFormats()) formats << QString::fromLatin1(f);
-      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.2.1"}, {"qt_version", qVersion()},
+      cli::emitEvent({{"event", "doctor"}, {"cli_version", "3.3.0"}, {"qt_version", qVersion()},
                       {"platform", "offscreen"}, {"qt_image_formats", formats.join(",")},
                       {"core_image_formats", "png,jpeg,tiff"}, {"status", "ok"}});
       return 0;
@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
     onlyFor("stage", {"preview"}); onlyFor("through", {"process", "analyze"});
     onlyFor("dry-run", {"project create", "project apply", "project edit"});
     onlyFor("resume", {"process", "analyze", "preview"}); onlyFor("pages", {"process", "analyze", "preview"});
-    onlyFor("html", {"process", "analyze", "preview", "review"}); onlyFor("jobs", {"process", "analyze", "preview"});
+    onlyFor("analysis-cache", {"process", "analyze", "preview"}); onlyFor("source-pages", {"preview"}); onlyFor("html", {"process", "analyze", "preview", "review"}); onlyFor("jobs", {"process", "analyze", "preview"});
     for (const auto& key : {"max-angle", "min-page-ratio", "review-policy"}) onlyFor(key, {"process", "analyze", "preview"});
     onlyFor("save", management);
     if (command == "review") for (const auto& key : options.keys()) if (key != "output" && key != "html") fail("Option --" + key + " does not apply to review");

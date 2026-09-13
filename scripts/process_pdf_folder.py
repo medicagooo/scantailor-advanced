@@ -31,7 +31,7 @@ import pymupdf
 from PIL import Image
 import image_encoding
 
-VERSION = 4
+VERSION = 5
 
 
 def request_cancel(signum, frame):
@@ -133,35 +133,58 @@ def write_review(work: Path, pages: list[dict]) -> Path:
     return target
 
 
+def metadata_root(root):
+    # Read legacy outputs in place; new runs keep auxiliary files one level down.
+    return root if (root / '.work').exists() or (root / 'batch-report.json').exists() else root / '_scantailor'
+
+
+def sample_indexes(expression, count):
+    if expression == 'sample': return sorted({0, count // 2, count - 1})
+    indexes = sorted({int(part.strip()) - 1 for part in expression.split(',')})
+    if not indexes or indexes[0] < 0 or indexes[-1] >= count:
+        raise ValueError('Source pages must be within the document')
+    return indexes
+
+
 def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str) -> dict:
     # Include the relative pathname to distinguish equal stems in subdirectories.
     book_id = hashlib.sha256(relative.as_posix().encode("utf-8")).hexdigest()[:12]
-    destination = root / relative.parent / f"{source.stem}.deskew.pdf"
-    work = root / ".work" / book_id
+    meta = metadata_root(root)
+    suffix = '' if relative.parent == Path('.') else '-' + book_id
+    destination = root / f"{source.stem}{suffix}.deskew.pdf"
+    if meta == root: destination = root / relative.parent / f"{source.stem}.deskew.pdf"
+    work = meta / '.work' / book_id
     work.mkdir(parents=True, exist_ok=True)
     state_path = work / "state.json"
     previous = load_json(state_path)
     signature = {"version": VERSION, "source": str(source), "source_sha256": sha256(source),
                  "cli_sha256": sha256(args.cli), "dpi": args.dpi, "page_size": args.page_size, "config_sha256": config_hash,
                  "wrapper_sha256": sha256(Path(__file__)), "encoding_sha256": sha256(Path(image_encoding.__file__)), "pymupdf_version": pymupdf.VersionBind,
-                 "command": args.command, "stage": args.stage, "review_policy": args.review_policy,
+                 "command": args.command, "stage": args.stage, "sample": args.sample, "source_pages": args.source_pages, "review_policy": args.review_policy,
                  "max_angle": args.max_angle, "min_page_ratio": args.min_page_ratio,
                  "image_encoding": args.image_encoding}
     fingerprint = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()
     if args.command == "process" and destination.exists() and not (args.overwrite or (args.resume and previous.get("destination") == str(destination))):
         raise RuntimeError(f"Output exists: {destination}; use --resume or --overwrite")
     if (args.command == "process" and args.resume and previous.get("fingerprint") == fingerprint and previous.get("status") == "complete"
+            and not previous.get("result", {}).get("errors")
             and destination.exists() and previous.get("output_sha256") == sha256(destination)):
         emit("pdf_reused", input=str(source), output=str(destination))
         return previous["result"]
     # Changed inputs/config get a new generation. Old intermediates remain
     # available for recovery; never sweep or delete unknown files.
     generation = work / fingerprint[:16]
-    images = generation / "input"
+    # Rendering depends on source pixels, DPI and encoder, not analysis stage or
+    # output settings. Shared cache survives preview/process/config changes.
+    render_signature = {k: signature[k] for k in ('source_sha256','dpi','pymupdf_version','encoding_sha256')}
+    render_signature['encoding'] = args.image_encoding
+    render_id = hashlib.sha256(json.dumps(render_signature, sort_keys=True).encode()).hexdigest()
+    render_root = (args.cache_dir or meta / 'cache') / render_id
+    images = render_root / "input"
     processed = generation / "processed"
     images.mkdir(parents=True, exist_ok=True)
-    processed.mkdir(exist_ok=True)
-    render_state_path = generation / "render-state.json"
+    processed.mkdir(parents=True, exist_ok=True)
+    render_state_path = render_root / "render-state.json"
     render_state = load_json(render_state_path)
     rendered = render_state.get("pages", {})
     state = {"schema_version": 1, "fingerprint": fingerprint, "signature": signature,
@@ -174,11 +197,18 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
         if original.page_count == 0:
             raise RuntimeError("PDF has no pages")
         dimensions = []
-        for index, page in enumerate(original):
+        selected_sources = sample_indexes(args.source_pages or 'sample', original.page_count) if args.sample else list(range(original.page_count))
+        if args.sample:
+            configured = load_json(args.config) if args.config else {}
+            if configured.get('rules'): raise ValueError('快速抽样不支持按页规则，请使用精确预览')
+            emit('source_sample', selected_sources=[i + 1 for i in selected_sources], total_sources=original.page_count)
+        for ordinal, index in enumerate(selected_sources):
+            page = original[index]
             image_path = images / f"{index+1:05d}{extension}"
             dimensions.append((page.rect.width, page.rect.height))
             old = rendered.get(str(index), {})
-            if not (args.resume and image_path.exists() and old.get("sha256") == sha256(image_path)):
+            reused = image_path.exists() and old.get("sha256") == sha256(image_path)
+            if not reused:
                 pix = page.get_pixmap(dpi=args.dpi, colorspace=pymupdf.csRGB, alpha=False)
                 temp = image_path.with_suffix(".tmp" + extension)
                 # Encode the rendered RGB page once, with explicit DPI and codec.
@@ -187,7 +217,7 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
                 os.replace(temp, image_path)
                 rendered[str(index)] = {"sha256": sha256(image_path)}
                 save_json(render_state_path, {"pages": rendered})
-            emit("page_rendered", input=str(source), page=index+1, total=original.page_count)
+            emit("page_render_reused" if reused else "page_rendered", input=str(source), page=ordinal+1, source_page=index+1, total=len(selected_sources))
         # Stable image identities derive from the source PDF and source page,
         # not the generation folder (which changes when configuration changes).
         manifest = generation / "inputs.json"
@@ -195,27 +225,29 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
         save_json(manifest, {"schema_version": 1, "files": [
             {"path": str(images / f"{i+1:05d}{extension}"),
              "stable_id": hashlib.sha256(f"{source_hash}:{i+1}".encode()).hexdigest()}
-            for i in range(original.page_count)]})
+            for i in selected_sources]})
         command = [str(args.cli), args.command, "--manifest", str(manifest), "--output", str(processed),
-                   "--dpi", str(args.dpi), "--jobs", str(args.jobs), *image_encoding.arguments(args.image_encoding)]
+                   "--analysis-cache", str((args.cache_dir or meta / "cache").parent / "analysis-cache"),
+                   "--jobs", str(args.jobs), *image_encoding.arguments(args.image_encoding)]
         for key in ("review_policy", "max_angle", "min_page_ratio"):
             if getattr(args, key) is not None:
                 command += ["--" + key.replace("_", "-"), str(getattr(args, key))]
         if args.command != "process":
             command += ["--stage" if args.command == "preview" else "--through", args.stage, "--html"]
         if args.sample:
-            command += ["--pages", "sample"]
+            command += ["--pages", "all"]
         if args.config:
             command += ["--config", str(args.config)]
         if (processed / "state.json").exists():
-            command += ["--resume"] if args.resume else ["--overwrite"]
+            command += ["--overwrite"] if args.overwrite else ["--resume"]
         code = run_cli(command, generation / "events.jsonl")
         if code == 130:
             raise KeyboardInterrupt
         if code not in (0, 1):
             raise RuntimeError(f"CLI failed with code {code}; see {generation / 'events.jsonl'}")
         if args.command != "process":
-            return {"input": str(source), "output": str(processed), "review_pages": int(code == 1),
+            native_report = load_json(processed / "report.json")
+            return {"errors": native_report.get("errors", 0), "input": str(source), "output": str(processed), "review_pages": int(code == 1),
                     "project": str(processed / "project.scan"), "command": args.command}
         native = load_json(processed / "report.json")
         if native.get("schema_version") not in (1, 2):
@@ -277,7 +309,7 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
             if toc:
                 result_pdf.set_toc([[level, title, source_to_output.get(page, page)] for level, title, page in toc])
             destination.parent.mkdir(parents=True, exist_ok=True)
-            pending = destination.with_suffix(".pending.pdf")
+            pending = generation / "pending.pdf"
             result_pdf.save(pending, garbage=3, deflate=True)
         finally:
             result_pdf.close()
@@ -291,7 +323,7 @@ def process_pdf(source: Path, relative: Path, root: Path, args, config_hash: str
                 page.get_pixmap(matrix=pymupdf.Matrix(0.2, 0.2), alpha=False)
         os.replace(pending, destination)
     review = write_review(generation, reports)
-    result = {"input": str(source), "output": str(destination), "page_count": len(reports),
+    result = {"errors": native.get("errors", 0), "input": str(source), "output": str(destination), "page_count": len(reports),
               "complete_pages": sum(p["status"] == "complete" for p in reports),
               "review_pages": sum(p["status"] != "complete" for p in reports), "review": str(review), "pages": reports,
               "source_to_output": source_to_output}
@@ -325,8 +357,11 @@ def main() -> int:
     parser.add_argument("--review-policy", choices=("preserve", "report"))
     parser.add_argument("--max-angle", type=float)
     parser.add_argument("--min-page-ratio", type=float)
-    parser.add_argument("--sample", action="store_true", help="Preview first, middle and last logical pages")
+    parser.add_argument("--sample", action="store_true", help="Render only first/middle/last source pages for quick preview")
+    parser.add_argument("--source-pages", help="Quick preview source pages: sample or comma-separated 1-based numbers")
+    parser.add_argument("--cache-dir", type=Path, help="Shared PDF render cache; exclusively owned by this batch")
     args = parser.parse_args()
+    if args.source_pages and not args.sample: parser.error("--source-pages requires --sample")
     if args.sample and args.command != "preview":
         parser.error("--sample only applies to preview")
     args.cli = args.cli.resolve()
@@ -390,7 +425,17 @@ def main() -> int:
     if not files:
         parser.error("No input PDFs found")
     results, failures = [], []
-    with directory_lock(root):
+    meta = metadata_root(root)
+    meta.mkdir(parents=True, exist_ok=True)
+    if args.cache_dir:
+        args.cache_dir = args.cache_dir.resolve()
+        args.cache_dir.mkdir(parents=True, exist_ok=True)
+    # One shared-cache lock serializes preview/process writers using the same root.
+    from contextlib import ExitStack
+    with ExitStack() as locks:
+        locks.enter_context(directory_lock(meta))
+        if args.cache_dir and args.cache_dir != meta:
+            locks.enter_context(directory_lock(args.cache_dir))
         for source in files:
             emit("pdf_started", input=str(source))
             try:
@@ -404,7 +449,7 @@ def main() -> int:
             except Exception as error:
                 failures.append({"input": str(source), "message": str(error)})
                 emit("pdf_error", **failures[-1])
-            save_json(root / "batch-report.json", {"schema_version": 1, "results": results, "failures": failures})
+            save_json(meta / "batch-report.json", {"schema_version": 1, "results": results, "failures": failures})
     return 1 if failures or any(r["review_pages"] for r in results) else 0
 
 

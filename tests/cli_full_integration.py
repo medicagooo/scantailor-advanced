@@ -208,12 +208,12 @@ class FullCliTests(legacy.CliTests):
             self.assertEqual(pdf.get_toc(), [[1,"first",1],[1,"second",3]])
             self.assertAlmostEqual(pdf[0].rect.width,200)
             self.assertAlmostEqual(pdf[0].rect.height,240)
-        report = json.loads((output / "batch-report.json").read_text(encoding="utf-8"))["results"][0]
+        report = json.loads((output / "_scantailor" / "batch-report.json").read_text(encoding="utf-8"))["results"][0]
         ids = [p["logical_id"] for p in report["pages"]]
         modified = json.loads(config.read_text(encoding="utf-8")); modified["defaults"]["output"]={"fill_margins":False}; config.write_text(json.dumps(modified))
         result = subprocess.run(command+["--resume"],capture_output=True,text=True,encoding="utf-8")
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-        again = json.loads((output / "batch-report.json").read_text(encoding="utf-8"))["results"][0]
+        again = json.loads((output / "_scantailor" / "batch-report.json").read_text(encoding="utf-8"))["results"][0]
         self.assertEqual([p["logical_id"] for p in again["pages"]],ids)
 
     def test_curves_geometry_and_dewarped_layers(self):

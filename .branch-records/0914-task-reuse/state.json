@@ -1,0 +1,33 @@
+{
+  "status": "active",
+  "purpose": "Persistent CLI settings, consistent DPI, managed PDF output and reusable confirmed tasks",
+  "evidence": [
+    "docs/VERIFICATION.md",
+    ".branch-records\\0914-task-reuse\\verification.md",
+    "tests/task_reuse_integration.py"
+  ],
+  "requirements": [
+    "Unify effective input/output DPI and persist applied preferences",
+    "Final PDFs at output root; auxiliary files in _scantailor",
+    "Confirm duplicate overwrite and interrupted resume",
+    "Plan/confirm analysis and previews; reuse verified compatible work",
+    "Fast sample renders only first/middle/last source pages; exact preview explicit",
+    "Clarify original-snapshot resume and publish reviewed fixes with preceding UI/docs work to master"
+  ],
+  "next": "Commit verified implementation including merge predeclaration, fast-forward master, predeclare/commit/push origin master, verify remote SHA.",
+  "acceptance": [
+    "DPI display equals effective commands; preferences survive restart",
+    "Duplicate/completion/partial/cache scenarios tested",
+    "9-page sample renders only 3 sources",
+    "Bugbot review repaired; tests/build pass; normal master push verified"
+  ],
+  "integration": "unmerged",
+  "constraints": [
+    "Preserve original source files and old task readability",
+    "Noninteractive native CLI retains explicit flags; no hidden prompts",
+    "Cache validity verified; no unsafe geometry reuse",
+    "Quick preview rejects per-page rules; exact preview retains full-project semantics",
+    "Automatic defaults exclude document-specific geometry; original task snapshots preserve it",
+    "Preflight reports source count/stage/config differences and conservative recompute scope; precise cache hits are verified at execution"
+  ]
+}

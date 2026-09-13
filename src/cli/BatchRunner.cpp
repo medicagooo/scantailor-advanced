@@ -24,6 +24,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QDirIterator>
 #include <QDomDocument>
 #include <QFile>
 #include <QImageReader>
@@ -224,6 +225,115 @@ int run(const QJsonObject& options) {
   if (options["resume"].toBool() && !prior.isEmpty() && !reuse)
     emitEvent({{"event", "invalidated"}, {"reason", "Input, configuration or executable changed; recomputing whole-project layout."}});
 
+  // Source-only preview removes unsampled pages before any image-processing
+  // phase. Existing project geometry stays attached to stable page IDs. Positional
+  // rules need full-project numbering and therefore require exact preview.
+  if (options.contains("source-pages")) {
+    require(command == "preview", "--source-pages is only valid for preview");
+    require(session.config["rules"].toArray().isEmpty(), "Quick preview cannot use page rules; use exact preview.");
+    const auto sources = pages->toPageSequence(IMAGE_VIEW);
+    const int count = sources.numPages();
+    require(count > 0, "No preview sources");
+    QSet<int> indexes;
+    const auto expression = options["source-pages"].toString();
+    if (expression == "sample") indexes = {0, count / 2, count - 1};
+    else for (const auto& part : expression.split(',')) {
+      bool ok = false; const int index = part.trimmed().toInt(&ok);
+      require(ok && index >= 1 && index <= count, "Invalid source page selection");
+      indexes.insert(index - 1);
+    }
+    std::set<ImageId> keep;
+    int index = 0; for (const auto& page : sources) { if (indexes.contains(index++)) keep.insert(page.imageId()); }
+    std::set<PageId> removed;
+    for (const auto& page : pages->toPageSequence(PAGE_VIEW)) if (!keep.count(page.imageId())) removed.insert(page.id());
+    pages->removePages(removed);
+    emitEvent({{"event", "source_sample"}, {"selected_sources", indexes.size()}, {"total_sources", count}});
+  }
+  // A sealed result includes all generated artifacts. Reuse only after the input
+  // fingerprint and every recorded artifact hash match; incomplete tasks continue
+  // through the existing page-level checkpoint path.
+  const QString sealPath = outputDir + "/completion.json";
+  auto sealResult = [&](int code) {
+    if (code != 0) return;
+    QJsonObject files;
+    QDirIterator it(outputDir, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+      const auto path = it.next();
+      if (path == sealPath || QFileInfo(path).fileName().startsWith('.')) continue;
+      files[QDir(outputDir).relativeFilePath(path)] = hashFile(path);
+    }
+    writeJson(sealPath, {{"fingerprint", fingerprint}, {"files", files}, {"project", projectPath}, {"project_sha256", hashFile(projectPath)}});
+  };
+  if (reuse) {
+    QJsonObject seal;
+    try { seal = readJson(sealPath); } catch (const std::exception&) { /* Corrupt completion metadata requires verification/rebuild. */ }
+    const auto files = seal["files"].toObject();
+    bool valid = seal["fingerprint"].toString() == fingerprint && !files.isEmpty()
+        && seal["project"].toString() == projectPath && QFileInfo::exists(projectPath)
+        && hashFile(projectPath) == seal["project_sha256"].toString();
+    for (auto it = files.begin(); valid && it != files.end(); ++it) {
+      const auto path = QDir(outputDir).absoluteFilePath(it.key());
+      valid = QFileInfo::exists(path) && hashFile(path) == it.value().toString();
+    }
+    if (valid) {
+      const auto report = readJson(reportPath);
+      emitEvent({{"event", "task_reused"}, {"report", reportPath}});
+      int completed = 0;
+      for (const auto& value : report["pages"].toArray()) {
+        auto event = value.toObject();
+        if (event["status"] != "complete") continue;
+        event["event"] = "page_reused"; event["completed"] = ++completed;
+        event["total"] = report["pages"].toArray().size(); emitEvent(event);
+      }
+      emitEvent({{"event", "finished"}, {"exit_code", report["exit_code"]}, {"report", reportPath}, {"project", projectPath},
+                 {"complete", report["complete"].toInt()}, {"errors", report["errors"].toInt()}, {"review", report["review"].toInt()}});
+      return report["exit_code"].toInt();
+    }
+  }
+
+  // Stage checkpoints are keyed by ordered sources and all pre-output settings.
+  // Output encoding/color/threshold changes do not invalidate deskew or layout.
+  // Every cached project is hash verified and loaded without reapplying presets.
+  int cachedStage = -1;
+  QJsonObject cachedRecords;
+  QString analysisCache;
+  std::unique_ptr<QLockFile> analysisLock;
+  if (options.contains("analysis-cache")) {
+    auto key = signature;
+    for (const auto& name : {"output", "project", "input", "manifest", "command", "stage", "through", "pages", "html", "analysis-cache",
+                            "image_encoding", "output-dpi", "color-mode", "dewarp", "fill-margins", "fill-offcut", "review-policy", "max-angle", "min-page-ratio"}) key.remove(name);
+    auto config = key["configuration"].toObject();
+    config.remove("image_encoding");
+    auto cleanSettings = [](QJsonObject object) { for (const auto& k : {"output", "picture_zones", "fill_zones"}) object.remove(k); return object; };
+    config["defaults"] = cleanSettings(config["defaults"].toObject());
+    QJsonArray rules;
+    for (auto value : config["rules"].toArray()) {
+      auto rule = value.toObject(); auto settings = cleanSettings(rule["settings"].toObject());
+      if (!settings.isEmpty()) { rule["settings"] = settings; rules.append(rule); }
+    }
+    config["rules"] = rules; key["configuration"] = config;
+    QJsonArray order;
+    for (const auto& page : pages->toPageSequence(IMAGE_VIEW)) order.append(pages->stableImageId(page.imageId()));
+    key["source_order"] = order;
+    const auto hash = QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(key).toJson(QJsonDocument::Compact), QCryptographicHash::Sha256).toHex());
+    analysisCache = absolute(options["analysis-cache"].toString()) + "/" + hash;
+    require(QDir().mkpath(analysisCache), "Cannot create analysis cache");
+    analysisLock = std::make_unique<QLockFile>(analysisCache + "/.lock");
+    require(analysisLock->tryLock(0), "Analysis cache is being used by another task");
+    for (int stage = std::min(lastStage, 4); stage >= 0; --stage) {
+      try {
+        const auto metadata = readJson(analysisCache + "/" + QString::number(stage) + ".json");
+        const auto project = analysisCache + "/" + QString::number(stage) + ".scan";
+        if (metadata.isEmpty() || !QFileInfo::exists(project) || hashFile(project) != metadata["sha256"].toString()) continue;
+        ProjectSession restored({{"project", project}}, outputDir);
+        session.pages = restored.pages; session.stages = restored.stages; session.disambiguator = restored.disambiguator;
+        pages = session.pages; stages = session.stages;
+        cachedStage = stage; cachedRecords = metadata["records"].toObject();
+        break;
+      } catch (const std::exception&) { /* Invalid cache is a miss, never a success. */ }
+    }
+  }
+
   auto names = session.names(outputDir);
   const auto encoding = ImageEncoding::fromJson(options["image_encoding"].toObject());
   names.setImageEncoding(encoding);
@@ -264,6 +374,17 @@ int run(const QJsonObject& options) {
   auto phase = [&](const QString& label, int stage, const std::vector<PageInfo>& work) {
     struct Active { PageInfo page; BackgroundTaskPtr task; std::future<FilterResultPtr> result; };
     std::vector<Active> active;
+    if (stage <= cachedStage) {
+      for (const auto& page : work) {
+        auto record = cachedRecords[pageKey(page)].toObject();
+        record["input"] = page.imageId().filePath(); record["output"] = names.filePathFor(page.id());
+        record["id"] = processing::pageId(*pages, page); record["image_id"] = pages->stableImageId(page.imageId());
+        record["image_page"] = page.imageId().page(); record["status"] = "analyzed";
+        records[pageKey(page)] = record;
+      }
+      emitEvent({{"event", "phase_reused"}, {"stage", label}, {"total", int(work.size())}});
+      checkpoint(); return;
+    }
     size_t next = 0;
     size_t completed = 0;
     emitEvent({{"event", "phase_started"}, {"stage", label}, {"total", int(work.size())}});
@@ -315,6 +436,15 @@ int run(const QJsonObject& options) {
       QCoreApplication::processEvents();
       if (!active.empty()) QThread::msleep(10);
     }
+    if (!analysisCache.isEmpty() && stage <= 4 && !cancelled) {
+      bool valid = importErrors.isEmpty();
+      for (const auto& page : work) valid = valid && records[pageKey(page)].toObject()["status"] == "analyzed";
+      if (valid) {
+        const auto project = analysisCache + "/" + QString::number(stage) + ".scan";
+        session.save(project, outputDir, true);
+        writeJson(analysisCache + "/" + QString::number(stage) + ".json", {{"sha256", hashFile(project)}, {"records", records}});
+      }
+    }
   };
 
   auto initial = pages->toPageSequence(IMAGE_VIEW);
@@ -350,16 +480,16 @@ int run(const QJsonObject& options) {
       if (session.newProject || session.config.contains("preset") || options.contains("preset")) {
         auto base = physicsPreset(); base.remove("rotate");
         if (session.config.contains("preset") || options.contains("preset")) base["preset"] = "physics-safe";
-        configureLegacyPage(stages, page, base, session.newProject);
+        if (cachedStage < 1) configureLegacyPage(stages, page, base, session.newProject);
       }
       analyze.push_back(page);
     }
     session.validateSelectors();
     // GUI does this when selecting the layout filter; CLI stage execution has no selection event.
     stages->pageLayoutFilter()->processingSettings()->removePagesMissingFrom(pages->toPageSequence(PAGE_VIEW));
-    if (lastStage >= 2) { session.applyConfiguration(processing::Scope::Logical, {"deskew"}); phase("deskew", 2, analyze); }
-    if (lastStage >= 3 && !cancelled) { session.applyConfiguration(processing::Scope::Logical, {"content"}); session.validateManualGeometry(); phase("content", 3, analyze); }
-    if (lastStage >= 4 && !cancelled) { session.applyConfiguration(processing::Scope::Logical, {"layout"}); phase("layout", 4, analyze); }
+    if (lastStage >= 2) { if (cachedStage < 2) session.applyConfiguration(processing::Scope::Logical, {"deskew"}); phase("deskew", 2, analyze); }
+    if (lastStage >= 3 && !cancelled) { if (cachedStage < 3) session.applyConfiguration(processing::Scope::Logical, {"content"}); session.validateManualGeometry(); phase("content", 3, analyze); }
+    if (lastStage >= 4 && !cancelled) { if (cachedStage < 4) session.applyConfiguration(processing::Scope::Logical, {"layout"}); phase("layout", 4, analyze); }
     if (lastStage >= 4 && !cancelled && session.config["project"].toObject().contains("freeze_layout"))
       processing::applyProject(session.config, stages, pages);
   }
@@ -385,6 +515,7 @@ int run(const QJsonObject& options) {
     QJsonObject report{{"schema_version", 2}, {"stage", through}, {"pages", ordered}, {"errors", errors}, {"project", projectPath}, {"exit_code", errors ? 1 : 0}};
     writeJson(reportPath, report); writeJson(outputDir + "/analysis.json", session.inspect());
     if (options["html"].toBool()) reviewHtml(outputDir, report);
+    sealResult(errors ? 1 : 0);
     emitEvent({{"event", "finished"}, {"stage", through}, {"report", reportPath}, {"exit_code", errors ? 1 : 0}}); return errors ? 1 : 0;
   }
   session.applyConfiguration(processing::Scope::Logical, {"output", "picture_zones", "fill_zones"});
@@ -494,6 +625,7 @@ int run(const QJsonObject& options) {
   if (options["html"].toBool()) reviewHtml(outputDir, report);
   emitEvent({{"event", "finished"}, {"complete", complete}, {"review", review}, {"errors", errors},
              {"report", reportPath}, {"project", projectPath}, {"exit_code", code}});
+  sealResult(code);
   return code;
 }
 }

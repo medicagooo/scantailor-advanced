@@ -71,10 +71,10 @@ ScanTailor CLI 为 **ScanTailor Advanced** 增加可脚本化的文档处理能�
 .\scantailor-cli.exe preview `
   --input 'D:\Scans\pages' `
   --output 'D:\Scans\sample-preview' `
-  --dpi 300 --pages sample --stage output --html
+  --dpi 300 --source-pages sample --stage output --html
 ```
 
-打开命令报告中的 HTML 对照页。`sample` 在拆页后选择首、中、尾逻辑页，公共分析仍考虑完整项目。预览不等于整批输出，也不会生成最终完整 PDF。
+打开命令报告中的 HTML 对照页。`--source-pages sample` 在任何处理前选择首、中、尾源页，只处理这些源页；也可使用 `--source-pages 1,5,9`。快速预览不计算整书统一布局。需要精确共享布局或按页规则时，改用 `--pages sample`：该模式分析完整项目，仅导出抽样逻辑页。预览不等于整批输出，也不会生成最终完整 PDF。
 
 ## PDF 批处理
 
@@ -94,10 +94,12 @@ ScanTailor CLI 为 **ScanTailor Advanced** 增加可脚本化的文档处理能�
 | 输出 | 说明 |
 | --- | --- |
 | `<文件名>.deskew.pdf` | 组装完成的处理结果。 |
-| `batch-report.json` | 每本文档的状态与诊断入口。 |
-| `.work/…/processed/report.json` | 每页状态、输出哈希及可用的算法指标。 |
-| `.work/…/processed/project.scan` | 可用桌面 GUI 手动编辑的项目。 |
-| `.work/…/review/index.html` | 被标记页面的处理前后对照。 |
+| `_scantailor/batch-report.json` | 每本文档的状态与诊断入口。 |
+| `_scantailor/.work/…/processed/report.json` | 每页状态、输出哈希及可用的算法指标。 |
+| `_scantailor/.work/…/processed/project.scan` | 可用桌面 GUI 手动编辑的项目。 |
+| `_scantailor/.work/…/review/index.html` | 被标记页面的处理前后对照。 |
+
+新 PDF 任务的最终 PDF 直接放在输出目录根部，其余文件统一放入 `_scantailor/`。递归或显式选择输入时，文件名附稳定后缀以避免冲突。旧输出目录继续按原布局读取与恢复。原生图片命令保留平铺输出接口；工作台图片任务放入 `_scantailor/operations/`。
 
 **PDF 处理方式：** 默认按 300 DPI 将页面渲染为图片。正常处理页会成为图像页，不保留原有的可搜索文字层、链接和表单。本流程面向扫描文档，不是 PDF 内嵌图像的无损提取工具，也不执行 OCR。
 
@@ -139,7 +141,7 @@ PNG 压缩等级影响文件体积和编码时间，不影响像素质量。PDF 
 3. **处理方案：** 选择保真方案，或调整常用/全部设置。编辑先保留在草稿中，应用后才生效。
 4. **预览几页：** 查看本地对照效果，再选择**开始处理**执行完整批次。
 
-首页右侧显示 DPI、并发、疑难页策略和当前图片编码。任务完成后自动进入结果菜单，计时停止；通过**任务记录**查看或恢复已有任务。
+首页将 PDF 渲染/图片输入 DPI 与输出 DPI 分开显示。应用后的 DPI、并发、图片编码等设置自动保存到 `%LOCALAPPDATA%/ScanTailorCLI/menu/settings.json`，下次启动自动加载。按页规则与手动几何留在任务快照中，不会套用到另一份文档。任务完成后自动进入结果菜单，计时停止；通过**任务记录**查看或恢复已有任务。执行前会说明本次源页数、目标阶段及设置差异；重复任务可打开已验证结果，中断任务会询问是否继续，覆盖需要确认。继续任务沿用当时的输入、设置和操作，不采用当前表单修改，也不会把预览变为完整处理。
 
 ![CLI 中间图片设置面板：PNG 格式与默认压缩等级 6](docs/images/cli-image-encoding.png)
 
@@ -161,7 +163,7 @@ PNG 压缩等级影响文件体积和编码时间，不影响像素质量。PDF 
   -ImageFormat png -PngCompression 6 -Resume
 ```
 
-恢复前会检查输入、有效配置、程序文件和输出哈希。修改设置可能导致重新计算。保留 `.work` 目录以便恢复和复核；中间文件不自动清理，可能占用较多磁盘空间。
+恢复前会检查输入、有效配置、程序文件和输出哈希。修改设置可能导致重新计算。PDF 渲染缓存由预览和完整处理共享；仅修改输出设置时，可复用有效的纠偏、内容和布局检查点。原生命令可用 `--analysis-cache <目录>` 共享阶段缓存。复用需通过哈希校验，命中情况写入 JSONL，缺失或无效结果会补算。保留 `_scantailor` 目录以便恢复和复核；中间文件不自动清理，可能占用较多磁盘空间。
 
 纠偏置信度低、角度过大或纸张边界异常时，页面可能进入复核。默认 PDF 策略保留对应原页。通过自动检查并不能保证公式、细线或贴边内容完全无损。
 

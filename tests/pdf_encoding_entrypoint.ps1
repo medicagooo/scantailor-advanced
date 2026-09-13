@@ -20,7 +20,7 @@ foreach ($codec in @('png','tiff','jpeg')) {
     else { $options.JpegQuality = 25 }
     & (Join-Path $toolPath 'Process-PdfFolder.ps1') @options
     if ($LASTEXITCODE -ne 0) { throw "PowerShell $codec failed" }
-    $stateFile = Get-ChildItem -LiteralPath (Join-Path $output '.work') -Filter state.json -File -Recurse | Select-Object -First 1
+    $stateFile = Get-ChildItem -LiteralPath (Join-Path $output '_scantailor/.work') -Filter state.json -File -Recurse | Select-Object -First 1
     $state = Get-Content -LiteralPath $stateFile.FullName -Raw | ConvertFrom-Json
     $policy = $state.signature.image_encoding
     if ($policy.format -ne $codec) { throw 'Format was not forwarded' }

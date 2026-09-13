@@ -7,10 +7,10 @@
     ".branch-records/0913-readme/verification.md"
   ],
   "purpose": "Professional bilingual project README with real UI screenshots",
-  "next": "Documentation ready on local task branch; no remote push authorized. Actual desktop screenshots remain replaceable when capture helper works.",
+  "next": "Integrate and publish with 0914-task-reuse; verified local changes remain unmerged until recorded fast-forward succeeds.",
   "constraints": [
     "Documentation only; preserve preceding completion fix",
-    "No new push authorization"
+    "Publication to existing master authorized by current implementation/review/repair/push request; coordinated in 0914-task-reuse."
   ],
   "acceptance": [
     "Both language versions linked",

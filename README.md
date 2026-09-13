@@ -31,7 +31,7 @@ The processing engine runs locally, without a cloud service or API key. OCR is o
 | **PDF folder processing** | Render scanned PDFs, run the native engine, and assemble `<name>.deskew.pdf` files. |
 | **Six processing stages** | Orientation → page splitting → deskew → content selection → page layout → output. |
 | **Configurable output** | Preserve color/grayscale, use black-and-white or mixed output, and configure PNG/TIFF/JPEG encoding. |
-| **Preview and manual review** | Sample first/middle/last logical pages, inspect local comparisons, and refine geometry in the GUI. |
+| **Preview and manual review** | Preview only first/middle/last source pages, reuse verified analysis, and refine geometry in the GUI. |
 | **Automation and recovery** | UTF-8 JSONL events, per-page reports, exit codes, bounded concurrency, cancellation and hash-checked resume. |
 
 The default `physics-safe` preset preserves color and grayscale and disables binarization, despeckling and automatic dewarping. It is a conservative starting point for textbooks, diagrams and fine lines; inspect the results before processing a large collection.
@@ -71,10 +71,10 @@ Results include page images, `project.scan`, `report.json` and recovery state. I
 .\scantailor-cli.exe preview `
   --input 'D:\Scans\pages' `
   --output 'D:\Scans\sample-preview' `
-  --dpi 300 --pages sample --stage output --html
+  --dpi 300 --source-pages sample --stage output --html
 ```
 
-Open the HTML comparison reported by the command. `sample` selects the first, middle and last logical pages after splitting; shared analysis still considers the complete project. A preview is not a complete output batch or final PDF.
+Open the HTML comparison reported by the command. `--source-pages sample` processes only the first, middle and last source pages, before splitting. Use `--source-pages 1,5,9` for explicit source pages. This quick preview does not calculate whole-book layout. For exact shared layout or page-specific rules, replace it with `--pages sample`; that mode analyzes the full project and exports sample logical pages. A preview is not a complete output batch or final PDF.
 
 ## PDF batches
 
@@ -94,10 +94,12 @@ By default, the script processes PDFs directly inside the input folder, one book
 | Result | Purpose |
 | --- | --- |
 | `<name>.deskew.pdf` | Assembled processed document. |
-| `batch-report.json` | Per-document outcome and diagnostic references. |
-| `.work/…/processed/report.json` | Per-page status, output hashes and available processing metrics. |
-| `.work/…/processed/project.scan` | Project for manual editing in the desktop GUI. |
-| `.work/…/review/index.html` | Before/after review of flagged pages. |
+| `_scantailor/batch-report.json` | Per-document outcome and diagnostic references. |
+| `_scantailor/.work/…/processed/report.json` | Per-page status, output hashes and available processing metrics. |
+| `_scantailor/.work/…/processed/project.scan` | Project for manual editing in the desktop GUI. |
+| `_scantailor/.work/…/review/index.html` | Before/after review of flagged pages. |
+
+New PDF jobs place final PDFs directly in the output root and all auxiliary files under `_scantailor/`. Recursive or explicitly selected inputs receive a stable filename suffix to avoid collisions. Existing legacy output folders remain readable and resume in their original layout. Native image commands retain their documented flat output layout; workbench image results are managed under `_scantailor/operations/`.
 
 **PDF behavior:** pages are rasterized at 300 DPI by default. Normal processed pages become image pages; original searchable text layers, links and forms are not retained. This workflow is intended for scanned documents. It does not losslessly extract embedded scan images or perform OCR.
 
@@ -139,7 +141,7 @@ The workbench currently uses **Chinese labels**; automation commands use English
 3. **处理方案 — Settings:** select a conservative preset or edit common/advanced settings. Changes take effect only after applying the draft.
 4. **预览几页 — Preview:** inspect the local comparison before choosing **开始处理 — Process** for the complete batch.
 
-The right-hand overview shows DPI, concurrency, review policy and current image encoding. Completed tasks automatically move to the result menu and stop accruing elapsed time. Use **任务记录 — History** to inspect or resume an existing task.
+The overview separates PDF render/input DPI from output DPI. Applied settings, including DPI, concurrency and image encoding, are saved automatically to `%LOCALAPPDATA%/ScanTailorCLI/menu/settings.json` and restored on the next launch. Page-specific rules and manual geometry remain in task snapshots, so they are not accidentally applied to another document. Completed tasks automatically move to the result menu and stop accruing elapsed time. Use **任务记录 — History** to inspect or resume an existing task. Before execution, the workbench explains the selected source count, stage and changed settings. It offers existing valid results for duplicates, asks whether to continue interrupted tasks, and requires confirmation before overwriting. Resume uses the original task settings and operation; it does not adopt current form edits or turn a preview into a full batch.
 
 ![CLI image encoding dialog showing PNG format and compression level 6](docs/images/cli-image-encoding.png)
 
@@ -161,7 +163,7 @@ Resume the same task with the same paths and effective settings:
   -ImageFormat png -PngCompression 6 -Resume
 ```
 
-Resume validates inputs, effective configuration, the executable and output hashes before reusing results. Changed settings can require recomputation. Keep the `.work` directory for recovery and review; intermediates are not automatically deleted and can use substantial disk space.
+Resume validates inputs, effective configuration, the executable and output hashes before reusing results. Changed settings can require recomputation. PDF rendering is shared across previews and full processing; unchanged deskew/content/layout checkpoints can be reused when only output settings change. Native callers can share these checkpoints with `--analysis-cache <directory>`. Cache hits are hash-checked and reported as JSONL events; incomplete or invalid artifacts are rebuilt. Keep the `_scantailor` directory for recovery and review; intermediates are not automatically deleted and can use substantial disk space.
 
 Low-confidence deskew, excessive angles or suspicious page boundaries can flag a page for review. The default PDF policy preserves its original page. A successful automatic check does not guarantee that all formulas, thin lines or edge content survived unchanged.
 

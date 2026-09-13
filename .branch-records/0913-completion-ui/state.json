@@ -5,11 +5,11 @@
     "Preserve existing user job and previews, verify regression and deliver local fixed package"
   ],
   "integration": "unmerged",
-  "next": "Use local CLI 3.2.1 package; close old 3.2.0 window and open existing job through task history. Remote push not requested for this fix.",
+  "next": "Integrate and publish with 0914-task-reuse; verified local changes remain unmerged until recorded fast-forward succeeds.",
   "constraints": [
     "Do not reprocess or modify user source PDF or existing completed job",
-    "No new push authorization for this separate bugfix; commit locally",
-    "Windows native only; preserve source and task snapshot semantics"
+    "Windows native only; preserve source and task snapshot semantics",
+    "Publication to existing master authorized by current implementation/review/repair/push request; coordinated in 0914-task-reuse."
   ],
   "status": "complete",
   "purpose": "Stop completed job timer and automatically show results",

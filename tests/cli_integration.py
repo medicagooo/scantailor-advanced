@@ -156,7 +156,7 @@ class CliTests(unittest.TestCase):
         command = [sys.executable, str(ROOT / "scripts/process_pdf_folder.py"), "--pdf-dir", str(folder), "--cli", str(CLI), "--dpi", "150"]
         result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
         self.assertIn(result.returncode, (0, 1), result.stdout + result.stderr)
-        report = json.loads((folder / "scantailor-output/batch-report.json").read_text(encoding="utf-8"))
+        report = json.loads((folder / "scantailor-output/_scantailor/batch-report.json").read_text(encoding="utf-8"))
         self.assertFalse(report["failures"], report)
         final = Path(report["results"][0]["output"])
         with pymupdf.open(final) as doc:

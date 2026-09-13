@@ -134,7 +134,7 @@ class WorkbenchTests(unittest.TestCase):
         self.assertIn('progress', controls)
         self.model.status = 'idle'
 
-    def test_sample_preview_preserves_whole_project(self):
+    def test_sample_preview_processes_only_sample_sources(self):
         files = [self.fixture(f'p{i}.png') for i in range(5)]
         self.workbench.select('images', files)
         self.model.apply({'schema_version': 2, 'defaults': {'deskew': {'mode': 'off'}, 'content': {'page_mode': 'off', 'content_mode': 'off'}}})
@@ -147,7 +147,7 @@ class WorkbenchTests(unittest.TestCase):
         self.assertIn(self.model.status, ('complete', 'review / partial failure'), self.model.lines)
         output = Path(self.model.last['output'])
         report = json.loads((output / 'report.json').read_text(encoding='utf-8'))
-        self.assertEqual(len(report['pages']), 5)
+        self.assertEqual(len(report['pages']), 3)
         self.assertEqual(sum(bool(p.get('preview')) for p in report['pages']), 3)
         viewer = (output / 'preview.html').read_text(encoding='utf-8')
         self.assertIn('只看原图', viewer)
@@ -317,6 +317,10 @@ def workflow_child(path, cli):
                     key(13, '\r')
                     until(lambda: model.inputs and 'start' in hits())
                     key(9, '\t')  # Successful import focuses Preview; next is Start.
+                    key(13, '\r')
+                    until(lambda: title_contains('执行计划'))
+                    key(13, '\r')
+                    until(lambda: title_contains('执行前确认'))
                     key(13, '\r')
                     until(lambda: model.last is not None)
                     # Completion must open the result menu, not strand the user on monitor.
