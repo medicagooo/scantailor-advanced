@@ -17,7 +17,7 @@
     "Persistence/restart and task identity regressions pass",
     "Bugbot fixes tested; portable build and archive verified; remote master SHA verified"
   ],
-  "status": "active",
+  "status": "complete",
   "integration": "verified",
   "evidence": [
     "docs/VERIFICATION.md",
@@ -25,5 +25,5 @@
     "tests/language_integration.py",
     "tests/language_viewer_integration.js"
   ],
-  "next": "Commit this verified artifact/integration checkpoint and push origin master; compare remote SHA to HEAD and report result. Pending pointer is intent until live ref verification."
+  "next": "None; master push verified at 82f332f050ad63477063557297389fd057b759a9; screenshot supplement tracked separately"
 }

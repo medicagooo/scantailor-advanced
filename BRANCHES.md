@@ -9,10 +9,11 @@
     "0913-completion-ui": ".branch-records/0913-completion-ui/state.json",
     "0913-readme": ".branch-records\\0913-readme/state.json",
     "0914-task-reuse": ".branch-records/0914-task-reuse/state.json",
-    "0914-cli-languages": ".branch-records\\0914-cli-languages\\state.json"
+    "0914-cli-languages": ".branch-records\\0914-cli-languages\\state.json",
+    "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json"
   },
   "active": [
-    "0914-cli-languages"
+    "0914-cli-screenshots"
   ],
   "changes": [
     {
@@ -164,6 +165,6 @@
   ],
   "format": 1,
   "pending": [
-    "0914-cli-languages/op-push"
+    "0914-cli-screenshots/op-merge"
   ]
 }

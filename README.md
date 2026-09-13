@@ -19,9 +19,9 @@ The processing engine runs locally, without a cloud service or API key. OCR is o
   <a href="#documentation">Documentation</a>
 </p>
 
-![English CLI workbench: input, output, processing options and PNG compression](docs/images/en/cli-workbench.png)
+![English CLI workbench: input, output, processing options and PNG compression](docs/images/en/cli-workbench-screenshot.png)
 
-*The English workbench, rendered from the actual CLI layout. Example paths are illustrative; this is not a desktop screen capture. [Image provenance and reproduction](docs/images/README.md).*
+*Actual English CLI window screenshot, captured on Windows with ScanTailor CLI 3.4.0. [Screenshot provenance](docs/images/README.md).*
 
 ## What it does
 

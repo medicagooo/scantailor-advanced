@@ -19,9 +19,9 @@ ScanTailor CLI 為 **ScanTailor Advanced** 增加可腳本化的文件處理能�
   <a href="#文件導航">文件導航</a>
 </p>
 
-![繁體中文 CLI 工作台：輸入檔案、保存位置、處理方案及 PNG 壓縮設定](docs/images/zh-Hant/cli-workbench.png)
+![繁體中文 CLI 工作台：輸入檔案、保存位置、處理方案及 PNG 壓縮設定](docs/images/zh-Hant/cli-workbench-screenshot.png)
 
-*中文工作臺介面圖，由 CLI 的實際版面配置程式碼繪製；路徑為演示值，不是桌面實機螢幕截圖。[影像來源與生成方法](docs/images/README.md)。*
+*ScanTailor CLI 3.4.0 在 Windows 上執行的繁體中文實機截圖。[截圖來源](docs/images/README.md)。*
 
 ## 核心能力
 

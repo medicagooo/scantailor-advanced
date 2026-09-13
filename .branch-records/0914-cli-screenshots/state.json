@@ -1,0 +1,22 @@
+{
+  "purpose": "Replace multilingual README workbench illustrations with genuine CLI window screenshots",
+  "requirements": [
+    "Capture actual English, Simplified and Traditional Chinese CLI windows and embed in corresponding README",
+    "Push existing master per previously confirmed main-branch mapping"
+  ],
+  "constraints": [
+    "Preserve user settings and existing tasks; isolated scratch state",
+    "Retain honest labels for remaining layout illustrations"
+  ],
+  "acceptance": [
+    "Three real window PNGs inspected",
+    "README links valid; remote master verified"
+  ],
+  "status": "active",
+  "integration": "unmerged",
+  "evidence": [
+    "docs/images/README.md",
+    ".branch-records/0914-cli-screenshots/verification.md"
+  ],
+  "next": "Validate, commit and fast-forward master; predeclare normal push"
+}
