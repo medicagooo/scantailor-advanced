@@ -165,6 +165,6 @@
   ],
   "format": 1,
   "pending": [
-    "0914-cli-screenshots/op-merge"
+    "0914-cli-screenshots/op-push"
   ]
 }

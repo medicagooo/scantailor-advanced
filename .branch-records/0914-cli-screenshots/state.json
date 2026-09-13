@@ -13,10 +13,10 @@
     "README links valid; remote master verified"
   ],
   "status": "active",
-  "integration": "unmerged",
+  "integration": "verified",
   "evidence": [
     "docs/images/README.md",
     ".branch-records/0914-cli-screenshots/verification.md"
   ],
-  "next": "Validate, commit and fast-forward master; predeclare normal push"
+  "next": "Commit checkpoint and git push origin master; verify remote HEAD. Pending intent may be stale after success."
 }

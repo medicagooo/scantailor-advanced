@@ -11,3 +11,5 @@ SHA-256 by language:
 }
 
 Next: validate links and registry, commit, fast-forward master, predeclare/commit normal origin master push, verify remote SHA.
+
+Verified master fast-forward to 603cb08df7d6b75db3c73440f888207f7048894e on 2026-09-14T02:04:22.306304+08:00. Three screenshot PNGs visually inspected; 90 README links/anchors and identical command blocks validated; registry and diff checks pass. Documentation only, no application rebuild required. Next: commit this checkpoint, push origin master and compare remote SHA.
