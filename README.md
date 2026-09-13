@@ -1,501 +1,232 @@
-# ScanTailor Advanced
+<p align="center">
+  <img src="src/resources/scantailor-advanced.png" alt="ScanTailor" width="80">
+</p>
 
-This fork includes a headless CLI and a Windows PDF folder processing script.
-See [CLI and PDF usage](docs/CLI.md) for the portable package, safe scanning preset, and build instructions.
+<h1 align="center">ScanTailor CLI</h1>
+<p align="center"><strong>Batch-clean scanned pages and PDFs with the ScanTailor Advanced engine.</strong></p>
+<p align="center">Headless commands · Guided terminal workbench · Local processing</p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-The ScanTailor version that merges the features of the `ScanTailor Featured` and `ScanTailor Enhanced` versions,
-brings new ones and fixes.  
+ScanTailor CLI adds scriptable document processing to **ScanTailor Advanced**. Deskew scans, split facing pages, adjust page boundaries and margins, and produce consistent image or PDF output. Use commands for repeatable batches, or the Chinese terminal workbench for guided setup and preview. The desktop GUI remains available for manual corrections.
 
-### Video demonstration of an older version
-[![image](https://github.com/ScanTailor-Advanced/scantailor-advanced/assets/6695517/d0e1dbbe-0e97-4d72-a011-28b171cad939)](https://vimeo.com/12524529) 
-If the video doesn't play, you may to have to login into your vimeo account.
+The processing engine runs locally, without a cloud service or API key. OCR is outside its scope.
 
-## Contents:
-* [Description](#description)
-* [Building](#building)
-* [About this fork](#about-this-fork)
-* [Features](#features)
-  * [**ScanTailor Enhanced**](#scantailor-enhanced)
-    * [Auto margins \[improved\]](#auto-margins-improved)
-    * [Page detect \[reworked\]](#page-detect-reworked)
-    * [Deviation \[reworked\]](#deviation-reworked)
-    * [Picture shape \[reworked\]](#picture-shape-reworked)
-    * [Multi column thumbnails view \[reworked\]](#multi-column-thumbnails-view-reworked)
-  * [**ScanTailor Featured**](#scantailor-featured)
-    * [ScanTailor Featured fixes & improvements](#scantailor-featured-fixes--improvements)
-    * [Line vertical dragging on dewarp](#line-vertical-dragging-on-dewarp)
-    * [Square picture zones \[reworked\]](#square-picture-zones-reworked)
-    * [Auto save project \[optimized\]](#auto-save-project-optimized)
-    * [Quadro Zoner \[reworked\]](#quadro-zoner-reworked)
-    * [Marginal dewarping](#marginal-dewarping)
-  * [**ScanTailor Universal**](#scantailor-universal)
-    * [ScanTailor Universal fixes & improvements](#scantailor-universal-fixes--improvements)
-  * [**ScanTailor Advanced**](#scantailor-advanced-features)
-    * [ScanTailor Advanced fixes & improvements](#scantailor-advanced-fixes--improvements)
-    * [Light and Dark color schemes](#light-and-dark-color-schemes)
-    * [Multi-threading support for batch processing](#multi-threading-support-for-batch-processing)
-    * [Full control over settings on output](#full-control-over-settings-on-output)
-    * [Filling outside areas](#filling-outside-areas)
-    * [Tiff compression](#tiff-compression)
-    * [Adaptive binarization](#adaptive-binarization)
-    * [Splitting output](#splitting-output)
-    * [Original background](#original-background)
-    * [Color segmenter and posterization](#color-segmenter-and-posterization)
-    * [Rectangular picture shape](#rectangular-picture-shape)
-    * [New zone interaction modes](#new-zone-interaction-modes)
-    * [Saving zoom and focus on switching output tabs](#saving-zoom-and-focus-on-switching-output-tabs)
-    * [Measurement units system](#measurement-units-system)
-    * [Status bar panel](#status-bar-panel)
-    * [Default parameters](#default-parameters)
-    * [Collapsible filter options](#collapsible-filter-options)
-    * [Auto adjusting content area](#auto-adjusting-content-area)
-    * [Black on white detection](#black-on-white-detection)
-    * [Guides](#guides)
-* [License](#license)
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#pdf-batches">PDF batches</a> ·
+  <a href="#image-format-and-compression">Image encoding</a> ·
+  <a href="#terminal-workbench">Workbench guide</a> ·
+  <a href="#documentation">Documentation</a>
+</p>
 
-## Description
+![CLI workbench with input, output, processing options and PNG compression settings](docs/images/cli-workbench.png)
 
-ScanTailor is an interactive post-processing tool for scanned pages. 
-It performs operations such as:
-  - [page splitting](https://github.com/scantailor/scantailor/wiki/Split-Pages), 
-  - [deskewing](https://github.com/scantailor/scantailor/wiki/Deskew), 
-  - [adding/removing borders](https://github.com/scantailor/scantailor/wiki/Page-Layout), 
-  - [selecting content](https://github.com/scantailor/scantailor/wiki/Select-Content) 
-  - ... and others. 
-  
-You give it raw scans, and you get pages ready to be printed or assembled into a PDF 
-or [DjVu](http://elpa.gnu.org/packages/djvu.html) file. Scanning, optical character recognition, 
-and assembling multi-page documents are out of scope of this project.
+*The Chinese workbench, rendered from the actual CLI layout. Example paths are illustrative; this is not a desktop screen capture. [Image provenance and reproduction](docs/images/README.md).*
 
-## Building
+## What it does
 
-Go to [this repository](https://github.com/ScanTailor-Advanced/scantailor-libs-build) and follow the instructions given there.
+| Capability | Practical use |
+| --- | --- |
+| **Image and project batches** | Process PNG, TIFF, JPEG and BMP inputs, multi-page TIFFs, or existing `.scan` projects. |
+| **PDF folder processing** | Render scanned PDFs, run the native engine, and assemble `<name>.deskew.pdf` files. |
+| **Six processing stages** | Orientation → page splitting → deskew → content selection → page layout → output. |
+| **Configurable output** | Preserve color/grayscale, use black-and-white or mixed output, and configure PNG/TIFF/JPEG encoding. |
+| **Preview and manual review** | Sample first/middle/last logical pages, inspect local comparisons, and refine geometry in the GUI. |
+| **Automation and recovery** | UTF-8 JSONL events, per-page reports, exit codes, bounded concurrency, cancellation and hash-checked resume. |
 
-**Windows – large JPEG/PNG (issue #20):** If large-format JPEG or PNG files fail to load on Windows, ensure the build uses **libjpeg-turbo** (or libjpeg 9+) and a recent libpng. The [scantailor-libs-build](https://github.com/ScanTailor-Advanced/scantailor-libs-build) repository provides compatible libraries.
+The default `physics-safe` preset preserves color and grayscale and disables binarization, despeckling and automatic dewarping. It is a conservative starting point for textbooks, diagrams and fine lines; inspect the results before processing a large collection.
 
-**Windows – Visual C++ runtime (issue #101):** Pre-built binaries are linked with **Microsoft Visual C++** (MSVC) runtimes. If the application does not start and Windows reports missing **`VCRUNTIME*.dll`**, **`MSVCP*.dll`**, or similar, install the **latest supported x64 “Visual C++ Redistributable”** from Microsoft’s page: [Latest supported VC++ Redistributable downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170). Match **x64** vs **x86** to the build you run.
+## Quick start
 
-**Windows – supported OS versions (issue #101):** Release builds follow upstream **Qt** and **toolchain** support policies; **legacy Windows** (for example Windows 7) is **not** exercised in this project’s CI and is **best-effort only**. You may need an **older tagged release** or a **self-built** binary against an older Qt/MSVC stack. Community reports (including compatibility tips) are welcome in the issue tracker.
+### 1. Prepare a Windows CLI bundle
 
-**Linux – Wayland (issue #97):** On Qt5 builds, if `XDG_SESSION_TYPE` is `wayland` and `QT_QPA_PLATFORM` is not set, the application defaults to the X11 (`xcb`) platform plugin to avoid broken dialogs and painting. Set **`SCANTAILOR_NO_XCB_FALLBACK=1`** in the environment to keep native Wayland and, if needed, set `QT_QPA_PLATFORM=wayland` or `QT_QPA_PLATFORM=xcb` yourself.
+Extract the **entire** CLI portable bundle to a writable folder. Keep `scantailor-cli.exe`, its DLLs, scripts and bundled Python together. A GUI-only ScanTailor installation does not include this CLI.
 
-**Linux – Flatpak / Flathub ([issue #105](https://github.com/ScanTailor-Advanced/scantailor-advanced/issues/105)):**
+The examples below use **PowerShell 7**, opened in the extracted bundle directory. If you are working from source, use the [build instructions](#build-from-source) instead. If you do not have a CLI bundle, build one from this repository; no GitHub release assets are currently published for this fork.
 
-| | |
-|--|--|
-| **Day-to-day binaries** | Prefer [GitHub Releases](https://github.com/ScanTailor-Advanced/scantailor-advanced/releases) when the project publishes `.deb` / AppImage (or other) builds for a tagged version. |
-| **Install from Flathub** | There is **no** official Flathub listing yet for this fork under the new ID. Shipping there requires a maintainer to follow [Flathub submission](https://docs.flathub.org/docs/for-app-authors/submission/) (separate repo/PR to [flathub/flathub](https://github.com/flathub/flathub)), AppStream metainfo, screenshots, and reviewer feedback. The in-repo manifest is meant to make that step mostly mechanical; issue [#105](https://github.com/ScanTailor-Advanced/scantailor-advanced/issues/105) tracks coordination. |
-| **Local Flatpak (maintainers / QA)** | Manifest: [`flatpak/org.scantailor.Advanced.json`](flatpak/org.scantailor.Advanced.json). Example: `flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo` then `flatpak-builder --user --install-deps-from=flathub --force-clean build-dir flatpak/org.scantailor.Advanced.json` (installs the KDE runtime/SDK from Flathub on first run). |
-| **CI smoke build** | On each **`v*` tag** push (and via **workflow dispatch**), [`.github/workflows/flatpak.yml`](.github/workflows/flatpak.yml) runs `flatpak-builder` and uploads a **`.flatpak` bundle** as a workflow artifact for smoke testing. This is **not** the Flathub build pipeline. |
-
-**Application ID:** the manifest uses `org.scantailor.Advanced` so it does **not** replace the legacy `com.github._4lex4.*` Flatpak. Author docs: [for app authors](https://docs.flathub.org/docs/for-app-authors/).
-
-**Linux – GitHub Releases (.deb / AppImage, [issue #64](https://github.com/ScanTailor-Advanced/scantailor-advanced/issues/64)):** Version tags matching `v*` run [`.github/workflows/release.yml`](.github/workflows/release.yml), which produces a `.deb` ([`build-deb.sh`](build-deb.sh)) and an AppImage attached to the GitHub Release when the workflow is enabled. The AppImage is built on **Ubuntu 24.04** (`ubuntu-latest`) and requires a compatible **glibc** (typically **Ubuntu 24.04+** or equivalent). On **Ubuntu 22.04** and similar older bases, use the **`.deb`** package or build from source. Report problems with those binaries in [issue #64](https://github.com/ScanTailor-Advanced/scantailor-advanced/issues/64).
-
-**Community examples / test data:** See also [scantailor-testing](https://github.com/ImageProcessing-ElectronicPublications/scantailor-testing) (community repository; issue [#43](https://github.com/ScanTailor-Advanced/scantailor-advanced/issues/43)).
-
-## About this fork
-
-Unfortunately, the [repository](https://github.com/4lex4/scantailor-advanced/releases) of @4lex4 seems to be no longer active.
-
-For this reason I have created this fork. It contains:
-- German translation
-- Polish translation (PR in the original repository, credit goes to @ukolaj-s)
-- French translation (PR in the original repository, credit goes to @maltaisn)
-- Korean translation (PR in the original repository, credit goes to @brendan-t and @mirusu400)
-- Beside 'background' and white you can now choose black as filling color
-- 1200 DPI output option
-- Some other fixes and improvements ...
-
-PRs are highly welcome ;-)
-
-## Features
-
-### ScanTailor Enhanced
-
-* #### Auto margins \[improved\]
-  Auto margins feature allows keep page content on original place. In the Margins step
-  you can choose from Auto, Manual (default) and Original mode. The manual mode
-  is the original one. Auto mode try to decide if it is better to align page top,
-  bottom or center. Original mode keeps page on their vertical original position.
-  
-  *This feature has been improved. See [page area](#page-area) feature description.*
-  *Also see [ScanTailor Advanced fixes & improvements](#scantailor-advanced-fixes--improvements)*
-
-* #### Page detect \[reworked\]
-  Page detect feature allows detect page in black margins or switch off page content
-  detection and keep original page layout.
-  
-  *This feature has been reworked.*
-  *See [ScanTailor Advanced fixes & improvements](#scantailor-advanced-fixes--improvements) for more information.*
- 
-* #### Deviation \[reworked\]
-  Deviation feature enables highlighting of different pages. Highlighted in red are pages
-  from Deskew filter with too high skew, from Select Content filter pages with different
-  size of content and in Margins filter are highlighted pages which does not match others.
-  
-  *This feature has been reworked. See [ScanTailor Advanced fixes & improvements](#scantailor-advanced-fixes--improvements) for more information.*
- 
-* #### Picture shape \[reworked\]
-  Picture shape feature adds option for mixed pages to choose from free shape and rectangular
-  shape images. This patch does not improve the original algoritm but creates from the
-  detected "blobs" rectangular shapes and the rectangles that intersects joins to one.
-  
-  *This feature has been reworked. See [rectangular picture shape](#rectangular-picture-shape) feature description.*
-
-* #### Multi column thumbnails view \[reworked\]
-  This allows to expand and un-dock thumbnails view to see more thumbnails at a time.
-  
-  *This feature had performance and drawing issues and has been reworked.*
-  
-### ScanTailor Featured
-
-* #### ScanTailor Featured fixes & improvements
-  * Deleted 3 Red Points.   
-    The 3 central red points on the topmost (bottom-most) horizontal blue line of the dewarping
-    mesh are now eliminated. 
-  * Manual dewarping mode auto switch.   
-    The dewarping mode is now set to MANUAL (from OFF) after the user has moved the dewarping mesh.
-  * Auto dewarping vertical half correction.   
-    This patch corrects the original auto-dewarping in half
-    the cases when it fails. If the vertical content boundary angle (calculated by auto-dewarping)
-    exceeds an empirical value (2.75 degrees from vertical), the patch adds a new point to
-    the distortion model (with the coordinates equal to the neighboring points) to make
-    this boundary vertical. The patch works ONLY for the linear end of the top (bottom)
-    horizontal line of the blue mesh (and not for the opposite curved end).
- 
-* #### Line vertical dragging on dewarp
-  You can move the topmost (bottom-most) horizontal blue line of the dewarping mesh up and
-  down as a whole - if you grab it at the most left (right) red point - holding down the CTRL key. 
- 
-* #### Square picture zones \[reworked\]
-  You can create the rectangular picture zones - holding down the CTRL key. 
-  You can move the (rectangular) picture zones corners in an orthogonal manner - holding down the CTRL key.
-  
-  *This feature has been reworked and is now a part of [new zone interaction modes](#new-zone-interaction-modes) feature.*
-  
-* #### Auto save project \[optimized\]
-  Set the "auto-save project" checked in the Settings menu and you will get 
-  your project auto-saved provided you have originally saved your new project.
-  Works at the batch processing too. 
-  
-  *This feature had performance issues and has been optimized.*
- 
-* #### Quadro Zoner \[reworked\]
-  Another rectangular picture zone shape. This option is based on [Picture shape](#picture-shape),
-  [Square picture zones](#square-picture-zones). It squeezes every Picture shape zone down to the real
-  rectangular picture outline and then replaces it (the resulting raster zone) by a vector rectangular zone,
-  so that a user could easily adjust it afterwards (by moving its corners in an orthogonal manner).
-  
-  *This feature has been reworked. See [rectangular picture shape](#rectangular-picture-shape) feature description.*
- 
-* #### Marginal dewarping 
-  An automatic dewarping mode. Works ONLY with such raw scans that have the top and 
-  bottom curved page borders (on the black background). It automatically sets the red points 
-  of the blue mesh along these borders (to create a distortion model) and then dewarps the scan 
-  according to them. Works best on the low-curved scans. 
- 
- 
-*Note: Other features of this version, such as Export, Dont_Equalize_Illumination_Pic_Zones, Original_Foreground_Mixed
-has't been moved due to dirty realization. Their functionality is fully covered by 
-[full control over settings on output](#full-control-over-settings-on-output) and 
-[splitting output](#splitting-output) features.*
-
-### ScanTailor Universal
-
-* #### ScanTailor Universal fixes & improvements
-  * Improvements for the thumbnail view.  
-    1. More accurate multi-column list handling.
-    2. Scaling thumbnails via **`Alt+Wheel`**.
-    
-  * Fixed some bugs of official and Enhanced version.
-
-### ScanTailor Advanced
-
-* #### ScanTailor Advanced fixes & improvements
-  * Portability.  
-    The settings and program files are stored in the folder with the application.  
-    *Note: If installed into a system directory, where config and data files can't be written into the
-    folder with the application executable, ScanTailor Advanced works as a standalone app and stores
-    its settings and application data in the appropriate system specific paths.*
-  
-  * Page splitting settings now influence on the output by filling offcut.
-    Fill offcut option has been added.
-  
-  * Page layout and all the other views now consider splitting settings.
-    Corresponding improvements are done for thumbnails.
-  
-  * Changed ScanTailor behavior on page split stage.
-    1. Reworked apply cut feature. Now on applying cut to the pages with different dimensions 
-       than the page the cut applied to, ScanTailor tries to adapt cutters instead of fully
-       rejecting the cut setting and switching to auto mode for those pages as it was before.
-       The later was annoying as pages could be similar and had the difference in a few pixels.
-    2. Added check to reject invalid cut settings in manual mode.
-    3. UI: Added cutters interaction between each other. They can't more intersect each other,
-       which created a wrong page layout configuration before.
-  
-  * Reworking on [multi column thumbnails view](#multi-column-thumbnails-view-reworked) feature from ver. Enhanced. 
-    Now thumbnails are shown evenly.
-  
-  * Added option to control highlighting the thumbnails of pages with high deviation with red asterisks. 
-    The option refreshes the thumbnails instantly.
-  
-  * Deviation feature reworked.  
-    1. A deviation provider implemented.  
-       It supports caching and recalculates the values on demand. There isn't more any necessity to store deviation in page parameters and so in the project file, that approach caused some problems as the deviation is not actually a page parameter and depends on all the pages in the project.  
-    2. Added sorting by decreasing deviation.
-
-  * Page/content boxes and auto margins features fixes & improvements.  
-    1. Added a feature of dragging both content and page areas by using **`Shift+LMB`** combination.
-    2. A page box implementation reworked. Now it's interactive and can be adjusted by the same way as a content box is done.
-    3. The page rectangle does not require refreshing page and won't be reset on the content area changes.
-    4. Implemented applying the page/content boxes to the other pages automatically correcting the position of the boxes.
-    5. Added width and height parameters to regulate the page box size in manual mode.
-    6. Auto margins option has been moved out of the alignment settings and does no more force to use only the original layout.
-    7. Auto margins feature now considers page box changes made at the selection content stage.
-    8. Other bug fixes and improvements.
-
-  * Auto and original alignment modes reworked:  
-    1. The original and auto alignment modes didn't work correctly due to the error in code.
-    2. Both the modes didn't work rightly after select content stage or reopening the project file, always requiring secondary batch processing of every page at margins stage to work correctly.
-    3. Reworked calculation method for the original alignment. Now it is more precise.
-    4. Original alignment mode now considers the page box from 4th stage.
-    5. Fixed behaviour of horizontal alignment, when the original mode enabled, and auto margins has been enabled/disabled. Also on applying auto-margins / original alignment to the set of pages, that is now set correctly for each page.
-    6. Added ability to separately control vertical and horizontal automatic alignment when auto or original alignment mode enabled.  
-
-  * Changed the way of the adjustment of the despeckle strength.  
-    Now that's set via the slider. It allows to adjust the despeckle strength more smoothly and exactly.
-    Value 1.0 matches the old cautious mode, 2.0 - normal and 3.0 - aggressive.
-    
-  * Improvements on the thumbnails view and navigation:  
-    * Saving selection of pages on filter switch.
-    * Separate highlighting for selection leader in thumbnails.
-    * Navigating between selected pages.
-      Use **`Shift+PgUp/Q`** and **`Shift+PgDown/W`** to navigate between selected pages.
-    * Added buttons to navigate between pages.
-    * Multi page selection mode without using keyboard.
-    * The question as to whether cancel multi page selection.
-    * Go to a page by its number (**`Ctrl+G`** shortcut).
-
-  * Added options in the settings to manage the quality and size of thumbnails.  
-    It's possible to switch thumbnail quality while working on a project with the changes applied immediately.
-    For every quality chosen a cache is created.  
-    *Usage example: you could use this feature for the preview purpose, which is faster than simple navigating between pages.
-    Undock the thumbnails panel, set the quality, for ex., to 700, and size to 1000. You can mark problem pages with `Ctrl+Click` on a thumbnail
-    and navigate between these selected pages after finishing to fix them. To finish the preview change the quality and size values back
-    and dock the panel.*  
-
-  * Fixed other bugs of official, Enhanced and Featured versions and made lots of other improvements.
-
-* #### Light and Dark color schemes
-  You can choose a desired color scheme in settings.
-
-* #### Multi-threading support for batch processing
-  This significantly increases the speed of processing. The count of threads to use can be
-  adjusted while processing.
-  
-  **Warning!** More threads requires more memory to use. Exclude situations of that to be overflowed.  
-
-* #### Full control over settings on output
-  This feature enables to control filling margins, normalizing illumination before binarization,
-  normalizing illumination in color areas and Savitzky-Golay and morphological smoothing options at the output stage
-  in any mode (of course, those setting that can be applied in the current mode).
- 
-* #### Filling outside areas
-  Now outside pixels can be filled with the background color of the page.
-  
-  Added filling setting with the following options:
-    1. Background: estimate the background and fill outside pixels with its color.
-    2. White: always fill with white.
- 
-* #### Tiff compression
-  Tiff compression options allow to disable or change compression method in tiff files.
-  
-  There are two options in settings dialog: B&W and color compression. 
-    1. The B&W one has None, LZW, Deflate and CCITT G4 (Default) options.
-    2. The color one has None, LZW (Default), Deflate and JPEG options.
-
-* #### Adaptive binarization
-  Sauvola and Wolf binarization algorithms have been added. They can be applied when
-  normalizing illumination does not help.
- 
-* #### Splitting output
-  The feature allows to split the mixed output scans into the pairs of a foreground (letters) 
-  and background (images) layer.
-  
-  You can choose between B&W or color (original) foreground.
-  
-  It can be useful:
-    * for the further DjVu encoding,
-    * to apply different filters to letters and images, which when being applied to the whole
-    image gives worse results.
-    * to apply a binarization to the letters from a third party app without affecting the images.
-   
-  *Note: That does not rename files to 0001, 0002... It can be made by a third party app, for example 
-  [Bulk Rename Utility](http://www.bulkrenameutility.co.uk/Main_Intro.php)*
-
-* #### Original background
-  This feature is a part of the [splitting output](#splitting-output) feature.
-  
-  It allows to preserve the original image background in the format ready for the further processing, when BW foreground is used.
-  It can be used to encode into DjVu the pages with the complex background using the semi-auto "split layers" method which gives much higher quality results than DjVu auto segmenter.
-  Also this feature can be used to extract high contrast elements of gradient images into the foreground layer by using second processing of the layer with pictures ("background").
-  
-  Properties of the original background:
-    * Original background images are saved into "original_background" folder in "out" directory.
-    * Pure black (`#000000`) and white (`#ffffff`) colors of original background image are reserved into `#010101` and `#fefefe`, respectively.
-    * Picture zones are marked with black when the BW content is marked with white. This property allow to use "select by color" feature of an image editor to select needed areas for their further processing, for example, apply blur to white holes and their nearest areas to get an effective compression level of the background layer in DjVu.
-    * Filling zones feature also removes trash and speckles from the original background when applied to the foreground layer.
-
-* #### Color segmenter and posterization
-  Color segmentation and posterization (color quantization) features have been implemented.
-  
-  Color segmentation allows to split the image into color segments and colorize b&w mask.
-  Posterization allows to reduce the number of colors of the image by grouping similar colors.
-  The main use of posterization is to be applied to segmented image to get an indexed image, that can then be encoded into DjVu as the foreground layer. It allows to create high-quality DjVu files with color text and elements having maximal compression level.
-  Posterization can also be used in color mode and can be applied to usual color gradient images for different purposes, for example, to increase their compression efficiency.
-
-* #### Rectangular picture shape
-  "Quadro" picture shape mode from Featured was merged with Rectangular one from Enhanced. Also removed restriction of ver. Featured on deleting all the auto zones. Before it resulted in resetting all the auto zones back.
-  Added sensitivity option. If sensitivity equals 25%, the results will be the same as they were in old "Quadro" mode, if 100% - as in old "Rectangular".
-
-* #### New zone interaction modes  
-  * Zone creation mode:  
-    Press **`Z`** to switch to polygonal mode.  
-    Press **`X`** to switch to lasso (free drawing) mode.  
-    Press **`C`** to switch to rectangular mode.  
-    Press **`Z`** or **`X`** while creating a new zone to switch between polygonal and rectangular modes respectively.  
-  * Zone:  
-    **`Shift+LMB`** on a zone - drag the zone.  
-    **`Ctrl+Shift+LMB`** on a zone - drag the zone copying.  
-    **`Ctrl+Alt+Click`** - copy the latest created zone to the current cursor position.  
-    **`Del`** when the cursor is over a zone - delete the zone.  
-  * Zone vertex:  
-    **`D`** when the cursor is over a zone vertex - delete the vertex.  
-    Hold **`Ctrl`** when dragging a zone vertex - make the angle of the vertex right.  
-
-* #### Saving zoom and focus on switching output tabs
-  The save is precise and considers the images transformations.  
-  Also added a feature of swithing the output tabs by using **`Ctrl+1..5`** keys combinations.  
-
-* #### Measurement units system
-  The settings are available in the main window menu.
-  Available units: pixels, millimetres, centimetres and inches.
-  
-  The system affects every aspect of the program, so, for example, it's now possible to adjust margins in pixels, but not only in millimetres or inches.
-
-* #### Status bar panel
-  The panel shows the next information: zone creation mode icon, mouse position relative to the image, physical size of the image, position of the selected page in current order and the page name and type (`[L]` or `[R]` - left or right page, if the page has been splitted).
-  
-  This feature is also affected by [measurement units system](#measurement-units-system).
-
-* #### Default parameters
-  Default parameters system supporting custom profiles has been implemented.
-  
-  The system allows to manage the default filter settings for every stage.
-  Those filter parameters will be set as defaults for any new project created.
-  
-  For example, it allows to set your own default margins standard, but not default 5, 10, 5, 10 mm, and so for the other parameters.
-  
-  Peculiarities:
-    1. There are two default profiles: "Default" and "Source". The "Default" profile represents default ST filter settings, the "Source" one represents the settings giving the source as output without any changes.
-    2. A user can create its own profiles. User profiles are stored in `config/profiles` folder or in an system specific one for application data.
-    3. The system consider the units settings from the [measurement units system](#measurement-units-system). Units are stored in the profile and ST automatically converts the values if needed.
-
-* #### Collapsible filter options.
-  Now group boxes containing filter options can be collapsed/expanded.  
-  The collapse status is preserved between restarts of the application.  
- 
-* #### Auto adjusting content area.
-  Use **`double-click`** on content to automatically adjust the content area.  
-  If the content is outside the area, the later will automatically be expanded and adjusted to the content at the position where double-click has been,
-  otherwise the area edge, nearest to that position, will be adjusted (on clicking hold **`Shift`** pressed to select
-  left or right edge only or **`Ctrl`** to select top or bottom one, or **`Shift+Ctrl`** to adjust both the nearest vertical and horizontal edges).
-  
-  It's much faster now to correct the content area if, for example, the page number has been missed by the auto algorithm.
-  It is no more required to manually and laboriously move the corners and edges of the content box.
-  
-* #### Black on white detection
-  This feature allows to process images with light content on dark background correctly by correcting auto algorithms.  
-  
-  Peculiarities:
-    1. Auto detection of pages with light content on dark background can be enabled or disabled in the settings.
-       Auto detection at the output stage is controlled separately.
-    2. There is per page control over the mode in the output filter options.
-    
-* #### Guides
-  This feature gives you a more flexible and precise way of positioning content in the page layout.
-  These are horizontal or vertical lines you can display on a page at the margins stage \(when aligning enabled\).  
-  *Note: Guides are adaptive to the page soft margins, i.e. when the latter changed the guides on the page
-  are automatically adjusted to match the new content position without requiring any manual re-adjusting.*
-  
-  Capabilities:  
-    * **`Right-click`** to create/remove guides from the **context menu** called.  
-    * **`Right-click`** on a guide to delete that guide from the **context menu** called.  
-    * **`Ctrl+Alt+LMB`** - drag the guide under the cursor.  
-    * **`Shift/Ctrl+LMB`** on the content rectangle - drag the page content.
-      Hold **`Shift`** pressed to restrict moving along the horizontal axis only or **`Ctrl`** for the vertical one.
-      Hold **`Shift+Ctrl`** for usual dragging.  
-    * **`Double-click`** on content - automatically attach that content to the nearest guide.
-      Hold **`Shift`** pressed to select vertical guides only or **`Ctrl`** for horizontal ones.
-      Hold **`Shift+Ctrl`** to attach that to both the nearest vertical and horizontal guides.  
-    * Use the **context menu** to enable/disable showing the hard margins rectangle.  
-
-## License
-
-This software is licensed under GNU GPLv3, you can read more about it on our [LICENSE](/LICENSE) file.
-
-## Building (detailed)
-
-#### Building on Linux (Ubuntu / Debian)
-
-Install the required dependencies:
-
-```bash
-sudo apt install build-essential cmake \
-  qt5-qmake qtbase5-dev libqt5svg5-dev qttools5-dev \
-  libboost-test-dev libboost-dev \
-  libjpeg-dev libpng-dev libtiff-dev zlib1g-dev
+```powershell
+.\scantailor-cli.exe doctor
+.\scantailor-cli.exe --help
 ```
 
-Configure and build (out-of-tree build is required):
+`doctor` checks the native runtime. The PDF wrapper and workbench also need Python: a full portable bundle includes it; source users install the exact dependencies in [requirements-pdf.txt](scripts/requirements-pdf.txt).
 
-```bash
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
+### 2. Process an image folder
+
+```powershell
+.\scantailor-cli.exe process `
+  --input 'D:\Scans\pages' `
+  --output 'D:\Scans\clean' `
+  --preset physics-safe --dpi 300 `
+  --image-format png --png-compression 6 --jobs 2
 ```
 
-For **offline or minimal chroot** builds where unit tests cannot be built (issue #61), use `cmake -DBUILD_TESTS=OFF ..` to skip the test targets.
+Use a dedicated, initially empty output folder. Input images are naturally sorted; this command does not recurse into subfolders. `--dpi` sets the input DPI explicitly; `--output-dpi` sets the output resolution separately. Inputs remain unchanged.
 
-The executable will be in the `build` directory. To install system-wide: `sudo make install`.
+Results include page images, `project.scan`, `report.json` and recovery state. Inspect the report as well as the images.
 
-To build a `.deb` package (with application icon and menu entry):
+### 3. Preview before a full run
 
-```bash
-./build-deb.sh
+```powershell
+.\scantailor-cli.exe preview `
+  --input 'D:\Scans\pages' `
+  --output 'D:\Scans\sample-preview' `
+  --dpi 300 --pages sample --stage output --html
 ```
 
-This compiles the project and produces `scantailor-advanced_<version>_<arch>.deb` in the project root. Install with `sudo dpkg -i scantailor-advanced_*.deb`.
+Open the HTML comparison reported by the command. `sample` selects the first, middle and last logical pages after splitting; shared analysis still considers the complete project. A preview is not a complete output batch or final PDF.
 
-#### Building a Windows .exe from Linux (cross-compile)
+## PDF batches
 
-You can cross-compile the Windows executable from Linux using [MXE](https://mxe.cc/) (M Cross Environment). One-time MXE setup (builds Qt5 and dependencies; can take 1–2 hours):
+From the portable bundle directory:
 
-```bash
-git clone https://github.com/mxe/mxe.git ~/mxe
-cd ~/mxe
-make MXE_TARGETS=x86_64-w64-mingw32.static qt5 jpeg libpng tiff zlib boost
+```powershell
+.\Process-PdfFolder.ps1 `
+  -PdfDir 'D:\Scans\pdf' `
+  -ScanTailorDir $PWD.Path `
+  -OutputDir 'D:\Scans\clean-pdf' `
+  -Dpi 300 -Jobs 2 `
+  -ImageFormat png -PngCompression 6
 ```
 
-Then from the ScanTailor Advanced source directory:
+By default, the script processes PDFs directly inside the input folder, one book at a time. Add `-Recursive` to include subfolders. If `-OutputDir` is omitted, results go into `scantailor-output` under the input folder. Original PDFs are never overwritten.
 
-```bash
-./build-windows.sh
+| Result | Purpose |
+| --- | --- |
+| `<name>.deskew.pdf` | Assembled processed document. |
+| `batch-report.json` | Per-document outcome and diagnostic references. |
+| `.work/…/processed/report.json` | Per-page status, output hashes and available processing metrics. |
+| `.work/…/processed/project.scan` | Project for manual editing in the desktop GUI. |
+| `.work/…/review/index.html` | Before/after review of flagged pages. |
+
+**PDF behavior:** pages are rasterized at 300 DPI by default. Normal processed pages become image pages; original searchable text layers, links and forms are not retained. This workflow is intended for scanned documents. It does not losslessly extract embedded scan images or perform OCR.
+
+`-PageSize original` is the default: output is fitted proportionally to the source page's visible physical size, with white padding when necessary. Use `-PageSize processed` for processed dimensions. Splitting can change the page count; if a split source page needs review, the wrapper preserves that original PDF page once. See the [PDF contract](docs/CLI.md) for details.
+
+## Image format and compression
+
+**PNG is the default, with lossless compression level 6.** These settings control PDF-rendered input images and CLI-produced page images. Existing source images are not rewritten.
+
+| Format | Native CLI | PDF PowerShell wrapper | Default / trade-off |
+| --- | --- | --- | --- |
+| PNG | `--image-format png --png-compression 6` | `-ImageFormat png -PngCompression 6` | Level **6**, range **0–9**. Lossless; higher compression trades time for size. |
+| TIFF | `--image-format tiff --tiff-compression deflate` | `-ImageFormat tiff -TiffCompression deflate` | **deflate**; also `none` and `lzw`. Lossless. |
+| JPEG | `--image-format jpeg --jpeg-quality 95` | `-ImageFormat jpeg -JpegQuality 95` | Quality **95**, range **1–100**. Lossy; unsuitable for transparent layered output. |
+
+PNG compression changes file size and encoding time, not pixel quality. JPEG in the PDF workflow may be encoded during both rendering and output. Only pass the compression option for the selected format. HTML previews remain PNG; GUI output and internal mask caches retain their TIFF behavior. Review fallbacks may preserve the original instead of using the requested encoding.
+
+For reusable configuration:
+
+```json
+{
+  "schema_version": 2,
+  "image_encoding": { "format": "png", "png_compression": 6 }
+}
 ```
 
-This produces `build-win-static/scantailor.exe`. Use `./build-windows.sh shared` for a smaller build that requires shipping DLLs from MXE’s `usr/x86_64-w64-mingw32.shared/bin/` alongside the .exe.
+Save this as `encoding.json` and pass `--config .\encoding.json`, or `-Config .\encoding.json` to the PDF script. Explicit command-line options override JSON configuration. Existing `.scan` settings are preserved unless explicitly overridden.
 
-#### Building on Windows (native)
+## Terminal workbench
 
-Go to [this repository](https://github.com/4lex4/scantailor-libs-build) and follow the instructions given there.
+```powershell
+.\scantailor-cli.exe menu
+```
+
+The workbench currently uses **Chinese labels**; automation commands use English option names. Double-clicking `scantailor-cli.exe` also opens the workbench in an interactive console.
+
+1. **输入文件 — Input:** paste a file/folder path, browse files, or select a folder. Quoted paths, spaces and Chinese names are supported. In the multi-line path field, Enter inserts a newline; **Ctrl+Enter** confirms.
+2. **保存位置 — Output:** choose a dedicated result folder.
+3. **处理方案 — Settings:** select a conservative preset or edit common/advanced settings. Changes take effect only after applying the draft.
+4. **预览几页 — Preview:** inspect the local comparison before choosing **开始处理 — Process** for the complete batch.
+
+The right-hand overview shows DPI, concurrency, review policy and current image encoding. Completed tasks automatically move to the result menu and stop accruing elapsed time. Use **任务记录 — History** to inspect or resume an existing task.
+
+![CLI image encoding dialog showing PNG format and compression level 6](docs/images/cli-image-encoding.png)
+
+*Image encoding panel, rendered from the production dialog layout.* Open **处理方案 → 自定义常用设置 → 中间图片格式与压缩**. Select the format and compression, choose **应用**, then **应用设置** in the outer form. Cancelling either draft leaves the task settings unchanged. See the [workbench guide](docs/MENU.md) for all controls.
+
+## Review, resume and automation
+
+Resume the same task with the same paths and effective settings:
+
+```powershell
+.\scantailor-cli.exe process `
+  --input 'D:\Scans\pages' --output 'D:\Scans\clean' `
+  --preset physics-safe --dpi 300 --jobs 2 `
+  --image-format png --png-compression 6 --resume
+
+.\Process-PdfFolder.ps1 `
+  -PdfDir 'D:\Scans\pdf' -ScanTailorDir $PWD.Path `
+  -OutputDir 'D:\Scans\clean-pdf' -Dpi 300 -Jobs 2 `
+  -ImageFormat png -PngCompression 6 -Resume
+```
+
+Resume validates inputs, effective configuration, the executable and output hashes before reusing results. Changed settings can require recomputation. Keep the `.work` directory for recovery and review; intermediates are not automatically deleted and can use substantial disk space.
+
+Low-confidence deskew, excessive angles or suspicious page boundaries can flag a page for review. The default PDF policy preserves its original page. A successful automatic check does not guarantee that all formulas, thin lines or edge content survived unchanged.
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Complete, no automatic review flags. |
+| `1` | Review required or partial failure — read the report. |
+| `2` | Invalid command or configuration. |
+| `3` | Runtime, input/output or environment error. |
+| `130` | Cancelled. |
+
+Native commands emit UTF-8 JSONL on stdout and diagnostics on stderr. Use `config schema` to discover settings and `--help` for command syntax. Start with 1–2 workers for large pages; `--jobs` accepts 1–16. Ctrl+C requests cancellation; allow the current native task to finish and save a checkpoint.
+
+For precise manual correction, open the generated `.scan` project in `scantailor-advanced.exe`, save your edits, then process it with `--project`. Do not edit the same output project in the GUI while the CLI is processing it.
+
+```powershell
+.\scantailor-cli.exe process `
+  --project 'D:\Scans\corrected.scan' --output 'D:\Scans\corrected-output'
+```
+
+## Build from source
+
+The maintained Windows entry point builds both CLI and GUI without downloading dependencies. The verified toolchain uses **Qt 6.8.3 / MinGW 13.1**, **Boost 1.85.0**, and the C image libraries, CMake and Ninja under a Strawberry C directory. Qt and the C++ compiler must use compatible runtimes.
+
+Get the source, then adjust the dependency paths in the build command:
+
+```powershell
+git clone https://github.com/medicagooo/scantailor-advanced.git
+Set-Location scantailor-advanced
+```
+
+```powershell
+.\scripts\Build-Windows.ps1 `
+  -QtRoot 'D:\Deps\Qt\6.8.3\mingw_64' `
+  -CompilerRoot 'D:\Deps\Qt\Tools\mingw1310_64' `
+  -BoostRoot 'D:\Deps\boost_1_85_0' `
+  -NativeRoot 'C:\Strawberry\c' -BuildDir '.\build-native'
+
+.\build-native\scantailor-cli.exe doctor
+```
+
+For Python features, prepare an environment with [the pinned dependencies](scripts/requirements-pdf.txt):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r .\scripts\requirements-pdf.txt
+```
+
+Dependency installation needs package access or a prepared local wheel directory; normal processing runs offline. From source, invoke `scripts\Process-PdfFolder.ps1` with `-ScanTailorDir .\build-native` and, if needed, `-PythonExe <path-to-python.exe>`. The workbench accepts `menu --python <path-to-python.exe>`.
+
+[Package-Windows.ps1](scripts/Package-Windows.ps1) creates a portable directory from the build and supplied dependencies; it can include embedded Python. The Windows scripts and bundle are the documented CLI path. Historical upstream platform/build notes are retained separately, not a claim that this fork's CLI is packaged for those platforms.
+
+## Documentation
+
+| Guide | Contents |
+| --- | --- |
+| [CLI and PDF reference](docs/CLI.md) — Chinese | Commands, schema, geometry, encoding, compatibility and PDF rules. |
+| [Terminal workbench](docs/MENU.md) — Chinese | Input, presets, previews, project editing and task history. |
+| [CLI coverage](docs/CLI-COVERAGE.md) | Mapping between GUI capabilities and CLI entry points. |
+| [Verification record](docs/VERIFICATION.md) | Tested behavior and known limitations. |
+| [Upstream reference](docs/UPSTREAM-README.md) | Preserved upstream feature history and build notes. |
+| [Third-party components](docs/THIRD-PARTY.md) | Runtime dependencies and redistribution notes. |
+
+## Contributing and license
+
+When reporting an issue, include the CLI version, command/configuration, exit code and relevant report entries. Remove personal paths or document contents before sharing logs. For changes, explain the affected workflow and run the relevant [integration checks](docs/VERIFICATION.md) or [upstream unit tests](TESTING.md).
+
+Built on ScanTailor Advanced and the work of ScanTailor, ScanTailor Featured, ScanTailor Enhanced and their contributors. Distributed under [GNU GPLv3](LICENSE); dependency licenses are listed in the [third-party notes](docs/THIRD-PARTY.md).

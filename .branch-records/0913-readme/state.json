@@ -1,0 +1,28 @@
+{
+  "evidence": [
+    "README.md",
+    "README.zh-CN.md",
+    "docs/images/README.md",
+    "scripts/render_readme_images.py",
+    ".branch-records/0913-readme/verification.md"
+  ],
+  "purpose": "Professional bilingual project README with real UI screenshots",
+  "next": "Documentation ready on local task branch; no remote push authorized. Actual desktop screenshots remain replaceable when capture helper works.",
+  "constraints": [
+    "Documentation only; preserve preceding completion fix",
+    "No new push authorization"
+  ],
+  "acceptance": [
+    "Both language versions linked",
+    "Commands checked against CLI and scripts",
+    "Screenshots inspected; local links and registry validate"
+  ],
+  "integration": "unmerged",
+  "requirements": [
+    "English default README with Chinese switch",
+    "CLI-first positioning: headless batches, terminal workbench, PDF workflow, image encoding",
+    "Use supplied PDF to verify workflows; illustrate CLI with actual layout renderer and GUI with genuine captures",
+    "Preserve upstream feature reference"
+  ],
+  "status": "complete"
+}

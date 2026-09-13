@@ -6,7 +6,8 @@
     "0911-cli-menu": ".branch-records/0911-cli-menu/state.json",
     "0911-cli-workbench": ".branch-records/0911-cli-workbench/state.json",
     "0912-image-encoding": ".branch-records\\0912-image-encoding/state.json",
-    "0913-completion-ui": ".branch-records/0913-completion-ui/state.json"
+    "0913-completion-ui": ".branch-records/0913-completion-ui/state.json",
+    "0913-readme": ".branch-records\\0913-readme/state.json"
   },
   "active": [],
   "changes": [
@@ -119,7 +120,7 @@
       "id": "completion-ui",
       "business_change": "Completed tasks previously stayed on execution page while elapsed timer continued. CLI 3.2.1 freezes/persists duration and automatically opens result actions after worker/preview/checkpoint finalization. Complete, review, failed and cancelled states transition; cancelling still waits for actual exit. Old task records and existing preview outputs remain usable.",
       "status": "implemented_unmerged",
-      "implementedAt": "2026-09-13T23:38:08.9855290+08:00"
+      "implementedAt": "2026-09-13T23:38:08.985529+08:00"
     }
   ],
   "format": 1,
