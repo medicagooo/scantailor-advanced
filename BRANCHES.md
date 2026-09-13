@@ -5,11 +5,10 @@
     "0910-cli-full": ".branch-records/0910-cli-full/state.json",
     "0911-cli-menu": ".branch-records/0911-cli-menu/state.json",
     "0911-cli-workbench": ".branch-records/0911-cli-workbench/state.json",
-    "0912-image-encoding": ".branch-records\\0912-image-encoding/state.json"
+    "0912-image-encoding": ".branch-records\\0912-image-encoding/state.json",
+    "0913-completion-ui": ".branch-records/0913-completion-ui/state.json"
   },
-  "active": [
-    "0912-image-encoding"
-  ],
+  "active": [],
   "changes": [
     {
       "status": "integrated",
@@ -93,7 +92,7 @@
       "domain": "CLI/PDF image encoding",
       "business_change": "CLI/PDF rendered and processed page images now default to PNG level 6 instead of fixed render PNG plus processed TIFF. PNG 0-9, TIFF none/LZW/Deflate and JPEG quality 1-100 are configurable and saved in presets/snapshots. Encoding changes invalidate resume caches while retaining ownership across format changes. PNG lossless preserve fallback, original PDF fallback and GUI TIFF caches remain; JPEG rejects selected transparent layer output. Schema 1/2 overrides supported.",
       "date": "2026-09-12",
-      "status": "integrated_local_master",
+      "status": "integrated",
       "id": "image-encoding",
       "request": "0912-image-encoding/req-execute",
       "evidence": [
@@ -106,10 +105,23 @@
       ],
       "implementedAt": "2026-09-12T14:26:22+08:00",
       "integratedAt": "2026-09-13T23:11:09.6072948+08:00"
+    },
+    {
+      "evidence": [
+        "scripts/scantailor_menu/model.py",
+        "scripts/scantailor_menu/ui.py",
+        "tests/completion_ui_integration.py",
+        "docs/VERIFICATION.md"
+      ],
+      "request": "0913-completion-ui/req-bug",
+      "domain": "CLI workbench lifecycle",
+      "date": "2026-09-13",
+      "id": "completion-ui",
+      "business_change": "Completed tasks previously stayed on execution page while elapsed timer continued. CLI 3.2.1 freezes/persists duration and automatically opens result actions after worker/preview/checkpoint finalization. Complete, review, failed and cancelled states transition; cancelling still waits for actual exit. Old task records and existing preview outputs remain usable.",
+      "status": "implemented_unmerged",
+      "implementedAt": "2026-09-13T23:38:08.9855290+08:00"
     }
   ],
   "format": 1,
-  "pending": [
-    "0912-image-encoding/op-push"
-  ]
+  "pending": []
 }

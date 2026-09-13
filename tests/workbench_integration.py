@@ -186,7 +186,12 @@ class WorkbenchTests(unittest.TestCase):
         startup.dwFlags, startup.wShowWindow = subprocess.STARTF_USESHOWWINDOW, 0
         child = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), '--cli', str(CLI), '--workflow-child', str(output)],
                                  startupinfo=startup, creationflags=subprocess.CREATE_NEW_CONSOLE)
-        code = child.wait(timeout=60)
+        try:
+            code = child.wait(timeout=60)
+        except subprocess.TimeoutExpired:
+            child.terminate()  # Only the child created by this test.
+            child.wait(timeout=10)
+            raise
         report = json.loads(output.read_text(encoding='utf-8'))
         self.assertEqual(code, 0, report)
         self.assertTrue(report['source_preserved'])
@@ -314,7 +319,8 @@ def workflow_child(path, cli):
                     key(9, '\t')  # Successful import focuses Preview; next is Start.
                     key(13, '\r')
                     until(lambda: model.last is not None)
-                    until(lambda: not model.running and title_contains('查看结果'))
+                    # Completion must open the result menu, not strand the user on monitor.
+                    until(lambda: not model.running and title_contains('打开结果目录') and title_contains('耗时'))
                     key(27, '\x1b')
                     until(lambda: 'start' in hits())
                     key(27, '\x1b')

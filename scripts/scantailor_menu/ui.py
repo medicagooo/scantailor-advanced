@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 from .console import Console
-from .model import Controller, seed, validate, write_json
+from .model import Controller, seed, validate, write_json, elapsed_seconds
 
 LABELS = {'defaults': '全局页面设置', 'project': '项目设置', 'rules': '按页 / 源图规则', 'preset': '预设',
           'input': '输入 DPI', 'orientation': '方向与初裁切', 'split': '拆分页面', 'deskew': '纠偏 / 斜切',
@@ -226,15 +226,21 @@ class UI:
         self.c.flush()
         selected = 0
         while True:
-            width, height = self.c.dimensions()
-            frame = Frame(width, height)
             with self.m.lock:
                 progress = self.m.progress.copy()
+                status = self.m.status
+            # This screen represents active work. Once the reader has finalized
+            # the task, move to results without requiring another key or click.
+            if status in ('complete', 'review / partial failure', 'failed', 'cancelled'):
+                self.results()
+                return
+            width, height = self.c.dimensions()
+            frame = Frame(width, height)
             done, total = progress['done'], progress['total']
             percent = min(1, done / total) if total else 0
             count = f'{done} / {total} 页' if total else '正在准备，请稍候'
-            seconds = max(0, int(time.monotonic() - progress['started'])) if progress['started'] else 0
-            frame.text(3, 1, STATES.get(self.m.status, self.m.status), ACCENT)
+            seconds = int(elapsed_seconds(progress))
+            frame.text(3, 1, STATES.get(status, status), ACCENT)
             frame.text(3, 3, '任务使用固定配置；取消后等待检查点保存完成。', MUTED)
             frame.rule(3, 4, width - 7)
             frame.text(4, 6, label(progress['stage']) + '    ' + count)
@@ -293,7 +299,11 @@ class UI:
             viewer = root / 'preview.html'
             rows = ['打开原图 / 结果对比' if viewer.exists() else '打开结果目录', '查看任务日志', '打开生成的项目', '打开复核 / 预览报告', '继续此任务（原始快照）']
             status = self.m.last.get('status', 'unknown')
-            choice = self.c.choose(STATES.get(status, status), rows, str(root))
+            seconds = self.m.last.get('elapsed_seconds')
+            hint = str(root)
+            if isinstance(seconds, (int, float)):
+                hint = f'耗时 {int(seconds) // 60:02d}:{int(seconds) % 60:02d} · {hint}'
+            choice = self.c.choose(STATES.get(status, status), rows, hint)
             if choice is None:
                 return
             if choice == 0:

@@ -24,6 +24,15 @@ def write_json(path, value):
     os.replace(temp, path)
 
 
+def elapsed_seconds(progress):
+    """Monotonic run duration; a finalized run never accrues idle UI time."""
+    started = progress.get('started', 0)
+    if not started:
+        return 0
+    finished = progress.get('finished')
+    return max(0, (time.monotonic() if finished is None else finished) - started)
+
+
 def validate(schema, value, path='settings'):
     kind = schema.get('type')
     valid = {'object': isinstance(value, dict), 'array': isinstance(value, list),
@@ -83,7 +92,7 @@ class Controller:
         self.last = None
         self.lines = []
         self.lock = threading.Lock()
-        self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': 0}
+        self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': 0, 'finished': None}
 
     def query(self, args):
         result = subprocess.run([str(self.cli), *map(str, args)], capture_output=True, encoding='utf-8', errors='replace')
@@ -196,7 +205,7 @@ class Controller:
                                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
         self.process, self.last, self.status = process, job, 'running'
         self.lines = []
-        self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': time.monotonic()}
+        self.progress = {'current': '', 'done': 0, 'total': 0, 'stage': '', 'started': time.monotonic(), 'finished': None}
         threading.Thread(target=self._read, args=(process, job), daemon=True).start()
 
     def _read(self, process, job):
@@ -233,9 +242,15 @@ class Controller:
                 with self.lock:
                     self.lines.append('预览对比页生成失败：' + str(error))
         state = 'cancelled' if code == 130 else {0: 'complete', 1: 'review / partial failure'}.get(code, 'failed')
-        job.update(status=state, exit_code=code)
+        finished = time.monotonic()
+        with self.lock:
+            duration = elapsed_seconds({**self.progress, 'finished': finished})
+        job.update(status=state, exit_code=code, elapsed_seconds=round(duration, 3))
         write_json(Path(job['folder']) / 'job.json', job)
         with self.lock:
+            # Publish completion only after preview generation and checkpoint save.
+            # UI.monitor observes status + frozen duration under this same lock.
+            self.progress['finished'] = finished
             self.status = state
             if code in (0, 1) and job['command'] == 'preview':
                 self.preview = (job['revision'], job['output'])

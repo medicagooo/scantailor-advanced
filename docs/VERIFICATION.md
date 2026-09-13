@@ -175,3 +175,11 @@ Validation completed using the offline Windows Qt 6.8.3 toolchain:
 One independent Bugbot review (generic agent; dedicated tool unavailable) found three P2 issues. Fixed schema 1 format overrides retaining old codec flags, resume refusing retained earlier-format output, and JPEG validation incorrectly including unselected layer pages. All three have focused `test_review_*` regressions in `tests/image_encoding_integration.py`. Local validation also caught and fixed Qt missing-key insertion, effective layer artifact reporting, isolated Python sibling imports and PowerShell argument grouping.
 
 Artifact: `bin/ScanTailor-CLI-3.2-win64/` and its sibling ZIP, built locally; no GitHub release upload. Package manifest lists file SHA-256 values; `source-provenance.json` identifies the implementation and registry commit. Previous packages remain available. No new browser interaction claim is made for this encoding-only change.
+
+## CLI 3.2.1 completion UI fix
+
+Reported completed sample preview had valid output (3 complete pages, 0 errors, exit code 0), but UI.monitor intentionally remained on the execution screen and recomputed elapsed time from the live clock forever. This UI lifecycle defect did not require PDF reprocessing.
+
+The reader now freezes and persists elapsed_seconds when finalizing a job. The monitor automatically transitions to results after the reader publishes complete/review/failed/cancelled; cancelling waits for actual exit. Tests in tests/completion_ui_integration.py cover no-input terminal transitions, completion during idle polling, cancellation waiting, persisted frozen duration for all exit classes and real preview readiness before opening results. Existing workbench/menu regressions are retained. Old job records without duration remain supported.
+
+2026-09-13 validation: 5 completion lifecycle tests passed against native and isolated portable runtimes; 9 workbench tests passed including real Windows keyboard flow automatically reaching the results menu with fixed duration; 8 menu regressions passed. Offline native build reports 3.2.1. Logs: build-native/completion-tests.log, completion-portable.log, completion-workbench.log, completion-menu.log. Original user job/output was read-only during diagnosis and preserved. Local artifact bin/ScanTailor-CLI-3.2.1-win64; remote push was not requested for this separate fix.

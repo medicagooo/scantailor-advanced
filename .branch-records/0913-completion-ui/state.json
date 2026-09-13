@@ -1,0 +1,30 @@
+{
+  "requirements": [
+    "Fix reported completed preview remaining on execution page with timer continuing",
+    "Automatically show result actions after complete/review/failure/cancellation; freeze and persist elapsed time",
+    "Preserve existing user job and previews, verify regression and deliver local fixed package"
+  ],
+  "integration": "unmerged",
+  "next": "Use local CLI 3.2.1 package; close old 3.2.0 window and open existing job through task history. Remote push not requested for this fix.",
+  "constraints": [
+    "Do not reprocess or modify user source PDF or existing completed job",
+    "No new push authorization for this separate bugfix; commit locally",
+    "Windows native only; preserve source and task snapshot semantics"
+  ],
+  "status": "complete",
+  "purpose": "Stop completed job timer and automatically show results",
+  "acceptance": [
+    "Completion transitions without keyboard input; timer duration stops",
+    "All terminal statuses transition; cancelling still waits for actual worker exit",
+    "Existing task preview remains accessible; workbench/menu regression passes"
+  ],
+  "evidence": [
+    "scripts/scantailor_menu/model.py: elapsed_seconds and Controller._read freeze/persist time after finalization",
+    "scripts/scantailor_menu/ui.py: UI.monitor switches terminal states to results; UI.results displays fixed duration",
+    "tests/completion_ui_integration.py: 5 cases passed native and isolated portable",
+    "tests/workbench_integration.py: 9 passed including real keyboard result-menu transition",
+    "tests/menu_integration.py: 8 passed",
+    "User completed preview verified: 3 complete outputs SHA match, 0 errors, exit 0; original job untouched",
+    "docs/VERIFICATION.md"
+  ]
+}
