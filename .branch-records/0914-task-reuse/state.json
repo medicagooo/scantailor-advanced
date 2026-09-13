@@ -4,7 +4,9 @@
   "evidence": [
     "docs/VERIFICATION.md",
     ".branch-records\\0914-task-reuse\\verification.md",
-    "tests/task_reuse_integration.py"
+    "tests/task_reuse_integration.py",
+    "Verified local master = 0914-task-reuse = 116b34385b4488cb2914d911db6b1aa348a4cd7e",
+    "ZIP SHA256 43fb53a60df919be292077382253f132e6051bd89383949a74988283ea51d1f4; all 456 manifested files verified inside archive"
   ],
   "requirements": [
     "Unify effective input/output DPI and persist applied preferences",
@@ -14,14 +16,14 @@
     "Fast sample renders only first/middle/last source pages; exact preview explicit",
     "Clarify original-snapshot resume and publish reviewed fixes with preceding UI/docs work to master"
   ],
-  "next": "Commit verified implementation including merge predeclaration, fast-forward master, predeclare/commit/push origin master, verify remote SHA.",
+  "next": "Commit the exact push predeclaration, push origin refs/heads/master without force, verify remote HEAD and clean checkout; hand off local package.",
   "acceptance": [
     "DPI display equals effective commands; preferences survive restart",
     "Duplicate/completion/partial/cache scenarios tested",
     "9-page sample renders only 3 sources",
     "Bugbot review repaired; tests/build pass; normal master push verified"
   ],
-  "integration": "unmerged",
+  "integration": "verified",
   "constraints": [
     "Preserve original source files and old task readability",
     "Noninteractive native CLI retains explicit flags; no hidden prompts",

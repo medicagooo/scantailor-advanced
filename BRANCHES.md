@@ -122,8 +122,9 @@
       "date": "2026-09-13",
       "id": "completion-ui",
       "business_change": "Completed tasks previously stayed on execution page while elapsed timer continued. CLI 3.2.1 freezes/persists duration and automatically opens result actions after worker/preview/checkpoint finalization. Complete, review, failed and cancelled states transition; cancelling still waits for actual exit. Old task records and existing preview outputs remain usable.",
-      "status": "implemented_unmerged",
-      "implementedAt": "2026-09-13T23:38:08.985529+08:00"
+      "status": "integrated_local",
+      "implementedAt": "2026-09-13T23:38:08.985529+08:00",
+      "integratedAt": "2026-09-14T01:24:43.599271+08:00"
     },
     {
       "domain": "CLI / task lifecycle",
@@ -138,13 +139,13 @@
         "docs/VERIFICATION.md",
         "tests/task_reuse_integration.py"
       ],
-      "status": "implemented_unmerged",
+      "status": "integrated_local",
       "date": "2026-09-14",
-      "integratedAt": null
+      "integratedAt": "2026-09-14T01:24:43.599271+08:00"
     }
   ],
   "format": 1,
   "pending": [
-    "0914-task-reuse/op-merge"
+    "0914-task-reuse/op-push"
   ]
 }

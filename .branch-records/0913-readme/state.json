@@ -4,10 +4,11 @@
     "README.zh-CN.md",
     "docs/images/README.md",
     "scripts/render_readme_images.py",
-    ".branch-records/0913-readme/verification.md"
+    ".branch-records/0913-readme/verification.md",
+    "Verified local master 116b34385b4488cb2914d911db6b1aa348a4cd7e contains the task commit."
   ],
   "purpose": "Professional bilingual project README with real UI screenshots",
-  "next": "Integrate and publish with 0914-task-reuse; verified local changes remain unmerged until recorded fast-forward succeeds.",
+  "next": "Local master integration verified at 116b34385b4488cb2914d911db6b1aa348a4cd7e; remote publication coordinated by 0914-task-reuse/op-push.",
   "constraints": [
     "Documentation only; preserve preceding completion fix",
     "Publication to existing master authorized by current implementation/review/repair/push request; coordinated in 0914-task-reuse."
@@ -17,7 +18,7 @@
     "Commands checked against CLI and scripts",
     "Screenshots inspected; local links and registry validate"
   ],
-  "integration": "unmerged",
+  "integration": "verified",
   "requirements": [
     "English default README with Chinese switch",
     "CLI-first positioning: headless batches, terminal workbench, PDF workflow, image encoding",

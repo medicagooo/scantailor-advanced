@@ -4,8 +4,8 @@
     "Automatically show result actions after complete/review/failure/cancellation; freeze and persist elapsed time",
     "Preserve existing user job and previews, verify regression and deliver local fixed package"
   ],
-  "integration": "unmerged",
-  "next": "Integrate and publish with 0914-task-reuse; verified local changes remain unmerged until recorded fast-forward succeeds.",
+  "integration": "verified",
+  "next": "Local master integration verified at 116b34385b4488cb2914d911db6b1aa348a4cd7e; remote publication coordinated by 0914-task-reuse/op-push.",
   "constraints": [
     "Do not reprocess or modify user source PDF or existing completed job",
     "Windows native only; preserve source and task snapshot semantics",
@@ -25,6 +25,7 @@
     "tests/workbench_integration.py: 9 passed including real keyboard result-menu transition",
     "tests/menu_integration.py: 8 passed",
     "User completed preview verified: 3 complete outputs SHA match, 0 errors, exit 0; original job untouched",
-    "docs/VERIFICATION.md"
+    "docs/VERIFICATION.md",
+    "Verified local master 116b34385b4488cb2914d911db6b1aa348a4cd7e contains the task commit."
   ]
 }
