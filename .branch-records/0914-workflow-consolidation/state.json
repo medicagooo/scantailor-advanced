@@ -31,7 +31,8 @@
     "docs/RELEASE.md",
     "scripts/process_pdf_folder.py::directory_lock",
     "tests/pdf_lock_contract.py",
-    "CI 34803442919: checks passed; Linux build and five C++ test groups passed; PDF test exposed Windows-only msvcrt import"
+    "CI 34803442919: checks passed; Linux build and five C++ test groups passed; PDF test exposed Windows-only msvcrt import",
+    "CI 34803879606: Linux and checks succeeded"
   ],
-  "next": "Push op-push-lock-fix-04 and verify automatic CI including native and PDF lock/integration tests"
+  "next": "Push op-push-runtime-05; inspect bounded Windows doctor result and fix its evidenced cause"
 }

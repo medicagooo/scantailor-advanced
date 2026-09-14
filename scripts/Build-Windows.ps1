@@ -29,8 +29,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed' }
     & "$nativePath/bin/cmake.exe" --build $BuildDir --parallel $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
-    & (Join-Path $BuildDir 'scantailor-cli.exe') doctor
-    if ($LASTEXITCODE -ne 0) { throw 'CLI runtime check failed' }
+    & "$PSScriptRoot/Test-CliRuntime.ps1" -Executable (Join-Path $BuildDir 'scantailor-cli.exe')
     if ($WithTests) {
         $oldPlatform = $env:QT_QPA_PLATFORM
         try {

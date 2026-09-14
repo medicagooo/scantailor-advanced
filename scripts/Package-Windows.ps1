@@ -92,8 +92,7 @@ $originalSearchPath = $env:PATH
 try {
     # Validate using only Windows system paths, not the development environment.
     $env:PATH = "$env:SystemRoot/System32;$env:SystemRoot"
-    & (Join-Path $packagePath 'scantailor-cli.exe') doctor
-    if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI runtime validation failed' }
+    & "$PSScriptRoot/Test-CliRuntime.ps1" -Executable (Join-Path $packagePath 'scantailor-cli.exe')
 } finally { $env:PATH = $originalSearchPath }
 $files = Get-ChildItem -LiteralPath $packagePath -Recurse -File | ForEach-Object {
     @{path=[IO.Path]::GetRelativePath($packagePath, $_.FullName);sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
