@@ -5,6 +5,8 @@ to their `state.json`. `active` lists current tasks and `pending` lists operatio
 references as `task/event`. Events are JSONL with unique IDs within each task.
 Request references use the same `task/event` notation in the index and a local
 event ID within that task's events. File evidence uses repository-relative paths.
+All file references use `/` separators (including records and evidence); `\` is
+invalid because the registry is also validated on Linux CI.
 
 Dates use Asia/Singapore (UTC+08:00). `date` is the first requirement date;
 `implementedAt`, `integratedAt`, and `deployedAt` are distinct evidenced milestones.

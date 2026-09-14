@@ -5,11 +5,11 @@
     "0910-cli-full": ".branch-records/0910-cli-full/state.json",
     "0911-cli-menu": ".branch-records/0911-cli-menu/state.json",
     "0911-cli-workbench": ".branch-records/0911-cli-workbench/state.json",
-    "0912-image-encoding": ".branch-records\\0912-image-encoding/state.json",
+    "0912-image-encoding": ".branch-records/0912-image-encoding/state.json",
     "0913-completion-ui": ".branch-records/0913-completion-ui/state.json",
-    "0913-readme": ".branch-records\\0913-readme/state.json",
+    "0913-readme": ".branch-records/0913-readme/state.json",
     "0914-task-reuse": ".branch-records/0914-task-reuse/state.json",
-    "0914-cli-languages": ".branch-records\\0914-cli-languages\\state.json",
+    "0914-cli-languages": ".branch-records/0914-cli-languages/state.json",
     "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json",
     "0914-manual-release": ".branch-records/0914-manual-release/state.json",
     "0914-common-dpi": ".branch-records/0914-common-dpi/state.json",
@@ -139,8 +139,8 @@
       "implementedAt": "2026-09-14T01:22:14.283792+08:00",
       "deployedAt": null,
       "evidence": [
-        ".branch-records\\0914-task-reuse\\state.json",
-        ".branch-records\\0914-task-reuse\\verification.md",
+        ".branch-records/0914-task-reuse/state.json",
+        ".branch-records/0914-task-reuse/verification.md",
         "docs/VERIFICATION.md",
         "tests/task_reuse_integration.py"
       ],
@@ -185,6 +185,6 @@
   "pending": [
     "0914-cli-screenshots/op-push",
     "0914-common-dpi/op-push-ssh",
-    "0914-workflow-consolidation/op-push-ssh-02"
+    "0914-workflow-consolidation/op-push-ci-fix-03"
   ]
 }

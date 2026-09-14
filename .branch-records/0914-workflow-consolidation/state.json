@@ -4,7 +4,8 @@
     "Exactly CI and Release workflow files",
     "CI checks Windows and Linux builds, tests, formatting and registry without publishing assets",
     "Manual Release selects windows/linux/all and uploads only to GitHub Releases",
-    "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage"
+    "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage",
+    "Registry file references must use portable forward slashes and validate on Linux"
   ],
   "constraints": [
     "Push to origin/master authorized by req-push; manual Actions dispatch is not authorized",
@@ -16,7 +17,7 @@
     "All platform selection cases and release source/asset contracts checked",
     "No Actions artifact uploads and no automatic Release trigger"
   ],
-  "status": "complete",
+  "status": "active",
   "integration": "unmerged",
   "evidence": [
     ".github/workflows/ci.yml",
@@ -28,5 +29,5 @@
     "tests/release_actions_contract.ps1",
     "docs/RELEASE.md"
   ],
-  "next": "Execute op-push-ssh-02, verify remote master against local HEAD; do not manually dispatch Actions"
+  "next": "Push op-push-ci-fix-03 and observe naturally triggered CI; fix further evidenced failures in the same scope"
 }
