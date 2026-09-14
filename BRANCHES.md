@@ -232,7 +232,7 @@
       "date": "2026-09-14",
       "domain": "Build / macOS distribution",
       "request": "0914-macos-release/req-macos",
-      "businessChange": "Extends Windows/Linux CI and manual Release with macOS ARM64/Intel. GUI app includes ordinary CLI and PDF scripts; Windows terminal menu remains unavailable. all selects four platforms. macOS ZIP/DMG are dependency-audited and ad-hoc signed, not notarized; Python PDF dependencies installed separately. macOS native validation pending.",
+      "businessChange": "Extends Windows/Linux CI and manual Release with macOS ARM64/Intel. GUI app includes ordinary CLI and PDF scripts; Windows terminal menu remains unavailable. all selects four platforms. macOS ZIP/DMG are dependency-audited and ad-hoc signed, not notarized; Python PDF dependencies installed separately. Both macOS architectures passed native CI, staged dependency/signature checks and CLI/PDF integration; Release archive validation pending.",
       "id": "macos-release-001",
       "evidence": [
         ".branch-records/0914-macos-release/state.json",
@@ -240,7 +240,7 @@
         ".github/workflows/release.yml",
         "docs/MACOS.md"
       ],
-      "status": "implemented_pending_native_validation",
+      "status": "native_ci_verified_release_pending",
       "implementedAt": "2026-09-14T13:19:52.3112737+08:00"
     }
   ],
@@ -248,6 +248,7 @@
   "pending": [
     "0914-cli-screenshots/op-push",
     "0914-common-dpi/op-push-ssh",
-    "0914-macos-release/push-macos-03"
+    "0914-macos-release/push-macos-04",
+    "0914-macos-release/release-draft-01"
   ]
 }

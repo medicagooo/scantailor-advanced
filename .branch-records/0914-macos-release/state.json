@@ -26,7 +26,8 @@
     "Windows native build and 5 CTest groups passed",
     "Offline 5 platform matrices and 5 relocation contracts passed; actual image processing smoke passed locally",
     "Push a6cef320a40f525503b0c2620e3af26262b60332 verified on cloud master; CI 34809964613 macOS ARM64 compiled and doctor passed; math zero-relative assertion failed; absolute tolerance repair passes local math_tests.",
-    "44235723 verified on cloud master; CI 34810562291 ARM64 passes all native and CLI/PDF integration tests; Intel run 34809964613 passes native tests. Both packaging audits found missing transitive libsharpyuv. Explicit Homebrew library resolution repair passes six offline relocation tests."
+    "44235723 verified on cloud master; CI 34810562291 ARM64 passes all native and CLI/PDF integration tests; Intel run 34809964613 passes native tests. Both packaging audits found missing transitive libsharpyuv. Explicit Homebrew library resolution repair passes six offline relocation tests.",
+    "CI 34811084012 at 4d55ad2e4e1641362fa4bb5b60d3a545de501b7b: checks, Windows, Linux, macOS ARM64 and Intel all success; staged macOS dependency audit, ad-hoc signature verification and image/PDF tests passed."
   ],
   "constraints": [
     "Windows-only interactive menu remains unsupported on macOS",
@@ -34,9 +35,9 @@
     "No Developer ID credentials; ad-hoc signature only, not notarized",
     "req-push-ci-draft authorizes push, CI repairs and manual draft Release after CI success; public publication not authorized"
   ],
-  "next": "Push push-macos-03 and verify staged macOS bundles in CI before draft Release.",
+  "next": "Dispatch release-draft-01 after pushing its predeclaration; inspect four platform assets and checksums, keep draft.",
   "status": "active",
-  "integration": "unmerged",
+  "integration": "verified",
   "acceptance": [
     "Offline contracts and syntax validators pass",
     "Windows regression build remains valid",
