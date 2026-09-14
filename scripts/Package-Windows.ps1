@@ -25,8 +25,15 @@ try {
     $env:PATH = "$compilerPath/bin;$qtPath/bin;$nativePath/bin;$oldPath"
     # MSYS2 suffixes Qt5 tools so they can coexist with Qt6.
     $deployQt = Join-Path $qtPath 'bin/windeployqt.exe'
-    if (-not (Test-Path -LiteralPath $deployQt)) { $deployQt = Join-Path $qtPath 'bin/windeployqt-qt5.exe' }
-    & $deployQt --release --no-translations --dir $packagePath `
+    $deployOptions = @()
+    if (-not (Test-Path -LiteralPath $deployQt)) {
+        $deployQt = Join-Path $qtPath 'bin/windeployqt-qt5.exe'
+        # MSYS2 uses dynamic OpenGL; ANGLE and the software renderer are optional.
+        # Deploy only the renderers present in this Qt installation.
+        if (-not (Test-Path -LiteralPath "$qtPath/bin/libGLESv2.dll")) { $deployOptions += '--no-angle' }
+        if (-not (Test-Path -LiteralPath "$qtPath/bin/opengl32sw.dll")) { $deployOptions += '--no-opengl-sw' }
+    }
+    & $deployQt @deployOptions --release --no-translations --dir $packagePath `
         (Join-Path $packagePath 'scantailor-cli.exe') (Join-Path $packagePath 'scantailor-advanced.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Qt deployment failed' }
     # Official Qt uses plugins/; the MSYS2 Qt5 build used by Actions uses share/qt5/plugins/.
