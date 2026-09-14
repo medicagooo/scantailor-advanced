@@ -28,5 +28,5 @@
     "tests/release_actions_contract.ps1",
     "docs/RELEASE.md"
   ],
-  "next": "Execute op-push-01 after registry commit; verify remote master SHA and report CI separately from publication"
+  "next": "Execute op-push-ssh-02, verify remote master against local HEAD; do not manually dispatch Actions"
 }
