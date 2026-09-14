@@ -27,13 +27,13 @@
     "Offline 5 platform matrices and 5 relocation contracts passed; actual image processing smoke passed locally"
   ],
   "constraints": [
-    "No push or manual workflow dispatch authorized in this instruction",
     "Windows-only interactive menu remains unsupported on macOS",
     "Version remains shared at 3.4.0",
-    "No Developer ID credentials; ad-hoc signature only, not notarized"
+    "No Developer ID credentials; ad-hoc signature only, not notarized",
+    "req-push-ci-draft authorizes push, CI repairs and manual draft Release after CI success; public publication not authorized"
   ],
-  "next": "Await explicit push; after authorized push inspect automatic macOS ARM64/Intel CI. Actual macOS compilation/signing/packaging not yet verified.",
-  "status": "complete",
+  "next": "Push push-macos-01; inspect CI; then dispatch draft v3.4.0 all platforms",
+  "status": "active",
   "integration": "unmerged",
   "acceptance": [
     "Offline contracts and syntax validators pass",
