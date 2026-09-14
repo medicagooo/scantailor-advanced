@@ -35,7 +35,7 @@
     "No Developer ID credentials; ad-hoc signature only, not notarized",
     "req-push-ci-draft authorizes push, CI repairs and manual draft Release after CI success; public publication not authorized"
   ],
-  "next": "Dispatch release-draft-01 after pushing its predeclaration; inspect four platform assets and checksums, keep draft.",
+  "next": "Execute release-draft-02 after registry push; validate all assets while retaining draft.",
   "status": "active",
   "integration": "verified",
   "acceptance": [
