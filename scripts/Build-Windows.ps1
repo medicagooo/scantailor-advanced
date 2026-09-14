@@ -29,6 +29,18 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed' }
     & "$nativePath/bin/cmake.exe" --build $BuildDir --parallel $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
+    # Qt5 DLLs copied beside the EXE change Qt's relative plugin lookup prefix.
+    # Deploy plugins before doctor/tests, just as the portable packaging path does.
+    & "$qtPath/bin/windeployqt.exe" --release --no-translations --dir $BuildDir `
+        (Join-Path $BuildDir 'scantailor-cli.exe') (Join-Path $BuildDir 'scantailor-advanced.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Build runtime deployment failed' }
+    $offscreen = Join-Path $qtPath 'plugins/platforms/qoffscreen.dll'
+    if (-not (Test-Path -LiteralPath $offscreen)) {
+        $offscreen = Join-Path $qtPath 'share/qt5/plugins/platforms/qoffscreen.dll'
+    }
+    $platforms = Join-Path $BuildDir 'platforms'
+    New-Item -ItemType Directory -Path $platforms -Force | Out-Null
+    Copy-Item -LiteralPath $offscreen -Destination $platforms
     & "$PSScriptRoot/Test-CliRuntime.ps1" -Executable (Join-Path $BuildDir 'scantailor-cli.exe')
     if ($WithTests) {
         $oldPlatform = $env:QT_QPA_PLATFORM

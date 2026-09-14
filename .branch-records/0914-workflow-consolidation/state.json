@@ -34,5 +34,5 @@
     "CI 34803442919: checks passed; Linux build and five C++ test groups passed; PDF test exposed Windows-only msvcrt import",
     "CI 34803879606: Linux and checks succeeded"
   ],
-  "next": "Push op-push-stack-06 and inspect captured Windows startup stacks"
+  "next": "Push op-push-plugins-07 and verify automatic CI for Windows and Linux"
 }

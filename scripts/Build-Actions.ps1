@@ -23,6 +23,9 @@ if ($IsWindows) {
     }
 }
 if ($Check) {
+    # MenuLauncher resolves "python" on PATH. Keep it on the same interpreter as
+    # the installed PDF dependencies, ahead of MSYS2's optional debugger Python.
+    $env:PATH = (Split-Path $env:CI_PYTHON -Parent) + [IO.Path]::PathSeparator + $env:PATH
     & $env:CI_PYTHON -m pip install -r "$PSScriptRoot/requirements-pdf.txt"
     if ($LASTEXITCODE -ne 0) { throw 'Python dependency install failed' }
     & $env:CI_PYTHON "$source/tests/pdf_lock_contract.py"

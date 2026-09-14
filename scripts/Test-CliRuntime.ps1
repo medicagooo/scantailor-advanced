@@ -17,7 +17,11 @@ $start.CreateNoWindow = $true
 $start.RedirectStandardOutput = $true
 $start.RedirectStandardError = $true
 foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
-if ($env:GITHUB_ACTIONS -eq 'true') { $start.Environment['QT_DEBUG_PLUGINS'] = '1' }
+if ($env:GITHUB_ACTIONS -eq 'true') {
+    $start.Environment['QT_DEBUG_PLUGINS'] = '1'
+    $start.Environment['QT_LOGGING_TO_CONSOLE'] = '1'
+    $start.Environment['QT_FORCE_STDERR_LOGGING'] = '1'
+}
 $process = [Diagnostics.Process]::new()
 $process.StartInfo = $start
 try {
