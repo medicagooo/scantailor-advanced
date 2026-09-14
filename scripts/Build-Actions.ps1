@@ -25,6 +25,8 @@ if ($IsWindows) {
 if ($Check) {
     & $env:CI_PYTHON -m pip install -r "$PSScriptRoot/requirements-pdf.txt"
     if ($LASTEXITCODE -ne 0) { throw 'Python dependency install failed' }
+    & $env:CI_PYTHON "$source/tests/pdf_lock_contract.py"
+    if ($LASTEXITCODE -ne 0) { throw 'PDF output lock contract failed' }
     $cli = Join-Path $build $(if ($IsWindows) { 'scantailor-cli.exe' } else { 'scantailor-cli' })
     $suites = @('cli_integration', 'cli_full_integration', 'image_encoding_integration')
     if ($IsWindows) { $suites += @('menu_integration', 'workbench_integration', 'completion_ui_integration', 'task_reuse_integration', 'language_integration') }

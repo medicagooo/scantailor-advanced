@@ -5,7 +5,8 @@
     "CI checks Windows and Linux builds, tests, formatting and registry without publishing assets",
     "Manual Release selects windows/linux/all and uploads only to GitHub Releases",
     "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage",
-    "Registry file references must use portable forward slashes and validate on Linux"
+    "Registry file references must use portable forward slashes and validate on Linux",
+    "PDF wrapper output lock supports Windows and POSIX while preserving exclusion and crash-release semantics"
   ],
   "constraints": [
     "Push to origin/master authorized by req-push; manual Actions dispatch is not authorized",
@@ -27,7 +28,10 @@
     "scripts/Package-Actions.ps1",
     "scripts/Release-Actions.ps1",
     "tests/release_actions_contract.ps1",
-    "docs/RELEASE.md"
+    "docs/RELEASE.md",
+    "scripts/process_pdf_folder.py::directory_lock",
+    "tests/pdf_lock_contract.py",
+    "CI 34803442919: checks passed; Linux build and five C++ test groups passed; PDF test exposed Windows-only msvcrt import"
   ],
-  "next": "Push op-push-ci-fix-03 and observe naturally triggered CI; fix further evidenced failures in the same scope"
+  "next": "Push op-push-lock-fix-04 and verify automatic CI including native and PDF lock/integration tests"
 }

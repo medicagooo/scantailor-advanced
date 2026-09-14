@@ -66,8 +66,15 @@ def load_json(path: Path) -> dict:
 
 @contextmanager
 def directory_lock(folder: Path):
-    """OS file lock, automatically released after interruption/crash (Windows)."""
-    import msvcrt
+    """Exclusive output ownership; OS releases the lock after interruption/crash.
+
+    Windows retains its byte-range lock; POSIX uses advisory flock on the same
+    persistent lock file. Never unlink the file: waiters must share one inode.
+    """
+    if os.name == "nt":
+        import msvcrt
+    else:
+        import fcntl
     with (folder / ".pdf-batch.lock").open("a+b") as lock:
         lock.seek(0, os.SEEK_END)
         if lock.tell() == 0:
@@ -75,14 +82,20 @@ def directory_lock(folder: Path):
             lock.flush()
         lock.seek(0)
         try:
-            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            if os.name == "nt":
+                msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as error:
             raise RuntimeError(f"Another PDF job owns {folder}") from error
         try:
             yield
         finally:
             lock.seek(0)
-            msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            if os.name == "nt":
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 def run_cli(command: list[str], log: Path) -> int:

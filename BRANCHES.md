@@ -179,12 +179,28 @@
         "scripts/scantailor_menu/workbench.py",
         ".branch-records/0914-common-dpi/verification.md"
       ]
+    },
+    {
+      "businessChange": "Linux PDF jobs previously stopped with missing msvcrt. directory_lock now uses nonblocking POSIX flock; Windows byte-range locking is retained. Concurrent wrapper jobs cannot share one output; process exit releases ownership and lock file remains. Wrapper fingerprint changes may invalidate prior render/processing signatures.",
+      "integratedAt": null,
+      "evidence": [
+        "scripts/process_pdf_folder.py",
+        "tests/pdf_lock_contract.py",
+        "docs/CLI.md"
+      ],
+      "request": "0914-workflow-consolidation/req-ci-error",
+      "status": "implemented",
+      "id": "pdf-lock-posix-001",
+      "implementedAt": "2026-09-14T11:49:01.1237521+08:00",
+      "date": "2026-09-14",
+      "deployedAt": null,
+      "domain": "PDF batch processing / output ownership"
     }
   ],
   "format": 1,
   "pending": [
     "0914-cli-screenshots/op-push",
     "0914-common-dpi/op-push-ssh",
-    "0914-workflow-consolidation/op-push-ci-fix-03"
+    "0914-workflow-consolidation/op-push-lock-fix-04"
   ]
 }
