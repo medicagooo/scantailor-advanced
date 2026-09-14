@@ -29,7 +29,7 @@ CLI = None
 class WorkbenchTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.model = Controller(CLI, self.root / 'jobs', language='zh-Hans')
         self.ui = UI(None, self.model)
         self.workbench = Workbench(self.ui)

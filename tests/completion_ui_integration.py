@@ -16,7 +16,7 @@ CLI=None
 class CompletionTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
-        self.root=Path(self.temp.name)
+        self.root=Path(self.temp.name).resolve()
         self.model=Controller(CLI, self.root / 'jobs', language='zh-Hans')
         self.console=Mock();self.console.dimensions.return_value=(100,30)
         self.ui=UI(self.console,self.model);self.ui.results=Mock()

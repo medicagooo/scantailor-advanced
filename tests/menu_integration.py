@@ -34,7 +34,8 @@ def wait(model):
 class MenuTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        # Hosted Windows TEMP can use 8.3 aliases; reports resolve paths to long names.
+        self.root = Path(self.temp.name).resolve()
         self.m = Controller(CLI, self.root / 'menu', language='zh-Hans')
 
     def tearDown(self):

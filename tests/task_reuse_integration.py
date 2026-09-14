@@ -23,7 +23,7 @@ CLI = None
 class LifecycleTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.source = self.root/'input'; self.source.mkdir()
         for n in range(9):
             im = Image.new('RGB',(400,540),'white'); d=ImageDraw.Draw(im)
@@ -98,7 +98,7 @@ class LifecycleTests(unittest.TestCase):
     def test_source_sample_and_complete_reuse(self):
         events=self.run_cli(extra=['--source-pages','sample','--stage','output','--html'])
         self.assertEqual([x['total'] for x in events if x['event']=='phase_started'],[3,3,3,3,3])
-        report=json.loads((self.root/'native/report.json').read_text())
+        report=json.loads((self.root/'native/report.json').read_text(encoding='utf-8'))
         self.assertEqual([Path(p['input']).name for p in report['pages']],['001.png','005.png','009.png'])
         events=self.run_cli(extra=['--source-pages','sample','--stage','output','--html','--resume'])
         self.assertTrue(any(e['event']=='task_reused' for e in events))
@@ -113,7 +113,7 @@ class LifecycleTests(unittest.TestCase):
         events=self.run_cli('process','changed',['--analysis-cache',cache,'--overwrite'])
         self.assertEqual([e['stage'] for e in events if e['event']=='phase_reused'],['split','deskew','content','layout'])
         self.run_cli('process','fresh')
-        a=json.loads((self.root/'changed/report.json').read_text());b=json.loads((self.root/'fresh/report.json').read_text())
+        a=json.loads((self.root/'changed/report.json').read_text(encoding='utf-8'));b=json.loads((self.root/'fresh/report.json').read_text(encoding='utf-8'))
         self.assertEqual([p.get('sha256') for p in a['pages']],[p.get('sha256') for p in b['pages']])
 
     def test_corrupt_completion_metadata_is_rebuilt(self):
@@ -121,7 +121,7 @@ class LifecycleTests(unittest.TestCase):
         (self.root/'native/completion.json').write_text('{broken')
         events=self.run_cli('process',extra=['--resume'])
         self.assertFalse(any(e['event']=='task_reused' for e in events))
-        self.assertIn('fingerprint',json.loads((self.root/'native/completion.json').read_text()))
+        self.assertIn('fingerprint',json.loads((self.root/'native/completion.json').read_text(encoding='utf-8')))
 
     def test_external_project_resume(self):
         self.run_cli('process',extra=['--save-project',self.root/'external.scan'])
@@ -180,10 +180,10 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(len([e for e in events if e['event']=='page_render_reused']),3)
         self.assertEqual(len([e for e in events if e['event']=='page_rendered']),6)
         self.assertEqual(sorted(p.name for p in out.iterdir()),['_scantailor','test.deskew.pdf'])
-        result=json.loads((out/'_scantailor/batch-report.json').read_text())['results'][0]
-        native=json.loads(next((out/'_scantailor/.work').glob('*/state.json')).read_text())
+        result=json.loads((out/'_scantailor/batch-report.json').read_text(encoding='utf-8'))['results'][0]
+        native=json.loads(next((out/'_scantailor/.work').glob('*/state.json')).read_text(encoding='utf-8'))
         processed=Path(result['pages'][0]['output_image']).parent
-        report=json.loads((processed/'report.json').read_text())
+        report=json.loads((processed/'report.json').read_text(encoding='utf-8'))
         self.assertEqual(report['pages'][0]['settings']['input']['dpi'],[200,200])
         self.assertEqual(report['pages'][1]['settings']['input']['dpi'],[100,100])
         self.assertTrue(any(e['event']=='pdf_reused' for e in run(['--resume'])))

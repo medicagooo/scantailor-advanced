@@ -24,7 +24,7 @@ CLI=None
 
 class LanguageTests(unittest.TestCase):
     def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
+        self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name).resolve()
         self.m=Controller(CLI,self.root/'settings',language='en')
     def tearDown(self):self.tmp.cleanup()
 
@@ -53,7 +53,7 @@ class LanguageTests(unittest.TestCase):
         self.assertEqual(loaded.language_preference,'zh-Hant')
         overridden=Controller(CLI,self.m.home,language='en')
         overridden.update_options({'jobs':2})
-        self.assertEqual(json.loads(overridden.preferences_path.read_text())['ui']['language'],'zh-Hant')
+        self.assertEqual(json.loads(overridden.preferences_path.read_text(encoding='utf-8'))['ui']['language'],'zh-Hant')
         Controller(CLI,self.m.home)
         self.assertEqual(i18n.language(),'zh-Hant')
         overridden.set_language('zh-Hans')
@@ -62,7 +62,7 @@ class LanguageTests(unittest.TestCase):
 
     def test_legacy_and_invalid_preferences_keep_processing_settings(self):
         self.m.apply({'schema_version':2,'defaults':{'output':{'dpi':[600,600]}}})
-        saved=json.loads(self.m.preferences_path.read_text());saved.pop('ui')
+        saved=json.loads(self.m.preferences_path.read_text(encoding='utf-8'));saved.pop('ui')
         self.m.preferences_path.write_text(json.dumps(saved))
         with patch.object(i18n,'preferred_languages',return_value=['zh-HK']):
             loaded=Controller(CLI,self.m.home)
@@ -92,8 +92,8 @@ class LanguageTests(unittest.TestCase):
             try:code=child.wait(timeout=35)
             except subprocess.TimeoutExpired:
                 child.kill();child.wait();raise
-            self.assertEqual(code,0,result.read_text() if result.exists() else 'No child report')
-            self.assertTrue(json.loads(result.read_text())['preference_unchanged'])
+            self.assertEqual(code,0,result.read_text(encoding='utf-8') if result.exists() else 'No child report')
+            self.assertTrue(json.loads(result.read_text(encoding='utf-8'))['preference_unchanged'])
 
     def test_failed_save_keeps_current_language(self):
         self.m.set_language('en')
@@ -113,7 +113,7 @@ class LanguageTests(unittest.TestCase):
     def test_catalog_coverage_placeholders_and_language_layouts(self):
         catalogs={name:i18n.catalog(name) for name in i18n.NAMES}
         # Inspect raw files too: fallback must not hide missing shipped translations.
-        raw={name:json.loads((Path(i18n.__file__).parent/'locales'/f'{name}.json').read_text()) for name in i18n.NAMES}
+        raw={name:json.loads((Path(i18n.__file__).parent/'locales'/f'{name}.json').read_text(encoding='utf-8')) for name in i18n.NAMES}
         self.assertEqual(set(raw['en']),set(raw['zh-Hans']));self.assertEqual(set(raw['en']),set(raw['zh-Hant']))
         formatter=Formatter()
         for key,english in catalogs['en'].items():
@@ -159,7 +159,7 @@ class LanguageTests(unittest.TestCase):
         source=self.root/'source.png';source.write_bytes(b'example')
         attack='</script><script>alert(1)</script> __LANGUAGE__ __TRANSLATIONS__ __DATA__'
         (self.root/'report.json').write_text(json.dumps({'pages':[{'input':str(source),'preview':str(source),'message':attack}]}))
-        self.m.set_language('zh-Hant');html=build_viewer(self.root).read_text()
+        self.m.set_language('zh-Hant');html=build_viewer(self.root).read_text(encoding='utf-8')
         self.assertIn('languages.value="zh-Hant"',html)
         self.assertIn('id="language"',html)
         data=json.JSONDecoder().raw_decode(html.split('const data=',1)[1])[0]
