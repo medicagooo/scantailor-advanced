@@ -16,10 +16,14 @@ $global:ReleaseContract_published = $false
 $global:ReleaseContract_exists = $false
 $global:ReleaseContract_created = $false
 $global:ReleaseContract_uploaded = $false
+$global:ReleaseContract_tagExists = $false
+$global:ReleaseContract_tagCreated = $false
+$global:ReleaseContract_head = $global:ReleaseContract_sha
 function gh {
     $global:LASTEXITCODE = 0
     $command = $args -join ' '
     if ($command -match '^api .*git/ref/tags/') { return (@{object=@{type='commit';sha=$global:ReleaseContract_sha}} | ConvertTo-Json -Compress) }
+    if ($command -match '^api .*git/refs --method POST') { $global:ReleaseContract_tagCreated=$true; return }
     if ($command -match '^release list') {
         if ($global:ReleaseContract_exists) { return '[{"tagName":"v3.4.0"}]' }
         return '[]'
@@ -34,7 +38,11 @@ function gh {
 }
 function git {
     $global:LASTEXITCODE = 0
-    if ($args[0] -eq 'rev-parse') { return $global:ReleaseContract_sha }
+    if ($args[0] -eq 'rev-parse') { return $global:ReleaseContract_head }
+    if ($args[0] -eq 'ls-remote') {
+        if ($global:ReleaseContract_tagExists) { return "$global:ReleaseContract_sha`trefs/tags/v3.4.0" }
+        return
+    }
     if ($args[0] -eq 'cat-file') { return }
     throw 'Unexpected git call'
 }
@@ -58,6 +66,20 @@ try {
         if (($matrix.include.platform -join ',') -ne ($expected -join ',')) { throw 'Platform matrix mismatch' }
     }
     if (-not $global:ReleaseContract_created) { throw 'Draft not created' }
+    Set-Content -LiteralPath "$scratch/version.h.in" -Value '#define VERSION "3.4.0"'
+    $env:RELEASE_TAG=''
+    & $releaseScript -Phase Prepare
+    if (-not $global:ReleaseContract_tagCreated) { throw 'Automatic tag not created' }
+    if (-not ((Get-Content -LiteralPath $env:GITHUB_OUTPUT) -contains 'tag=v3.4.0')) { throw 'Resolved tag output missing' }
+    $global:ReleaseContract_tagCreated=$false; $global:ReleaseContract_tagExists=$true
+    & $releaseScript -Phase Prepare
+    if ($global:ReleaseContract_tagCreated) { throw 'Existing tag recreated' }
+    $global:ReleaseContract_head='different'
+    Assert-Fails { & $releaseScript -Phase Prepare } 'automatic tag collision'
+    $global:ReleaseContract_head=$global:ReleaseContract_sha
+    Set-Content -LiteralPath "$scratch/version.h.in" -Value '#define VERSION "bad"'
+    Assert-Fails { & $releaseScript -Phase Prepare } 'invalid default version'
+    $env:RELEASE_TAG='v3.4.0'
     $global:ReleaseContract_exists=$true
     & $releaseScript -Phase Prepare
     $env:RELEASE_TAG='v3.4.0;bad'

@@ -6,7 +6,8 @@
     "Manual Release selects windows/linux/all and uploads only to GitHub Releases",
     "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage",
     "Registry file references must use portable forward slashes and validate on Linux",
-    "PDF wrapper output lock supports Windows and POSIX while preserving exclusion and crash-release semantics"
+    "PDF wrapper output lock supports Windows and POSIX while preserving exclusion and crash-release semantics",
+    "Blank Release tag reads VERSION from version.h.in at selected run commit; create missing vVERSION tag, reject existing tag at another commit"
   ],
   "constraints": [
     "Push to origin/master authorized by req-push; manual Actions dispatch is not authorized",
@@ -18,7 +19,7 @@
     "All platform selection cases and release source/asset contracts checked",
     "No Actions artifact uploads and no automatic Release trigger"
   ],
-  "status": "active",
+  "status": "complete",
   "integration": "unmerged",
   "evidence": [
     ".github/workflows/ci.yml",
@@ -32,7 +33,8 @@
     "scripts/process_pdf_folder.py::directory_lock",
     "tests/pdf_lock_contract.py",
     "CI 34803442919: checks passed; Linux build and five C++ test groups passed; PDF test exposed Windows-only msvcrt import",
-    "CI 34803879606: Linux and checks succeeded"
+    "CI 34803879606: Linux and checks succeeded",
+    "Offline release contract covers blank tag creation, same-commit reuse, collision rejection and invalid VERSION"
   ],
-  "next": "Push op-push-paths-10 after local test verification and verify automatic CI"
+  "next": "Await explicit push request for optional default-version release change; do not dispatch Release"
 }

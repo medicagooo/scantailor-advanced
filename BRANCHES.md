@@ -195,12 +195,26 @@
       "date": "2026-09-14",
       "deployedAt": null,
       "domain": "PDF batch processing / output ownership"
+    },
+    {
+      "request": "0914-workflow-consolidation/req-default-version",
+      "domain": "Build / Release",
+      "date": "2026-09-14",
+      "status": "implemented",
+      "evidence": [
+        ".github/workflows/release.yml",
+        "scripts/Release-Actions.ps1",
+        "tests/release_actions_contract.ps1",
+        "docs/RELEASE.md"
+      ],
+      "implementedAt": "2026-09-14T12:59:35.0023227+08:00",
+      "id": "release-default-version-001",
+      "businessChange": "Release tag becomes optional. Blank input reads VERSION from version.h.in and creates missing vVERSION tag at selected run commit. Existing default tag must match commit; explicit input still selects existing tag. All jobs share resolved tag and SHA; Release remains manual and publishes only GitHub Release assets."
     }
   ],
   "format": 1,
   "pending": [
     "0914-cli-screenshots/op-push",
-    "0914-common-dpi/op-push-ssh",
-    "0914-workflow-consolidation/op-push-paths-10"
+    "0914-common-dpi/op-push-ssh"
   ]
 }
