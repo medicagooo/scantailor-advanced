@@ -24,7 +24,8 @@
     "docs/RELEASE.md",
     "Independent Bugbot-style review completed; no remaining confirmed defects",
     "Windows native build and 5 CTest groups passed",
-    "Offline 5 platform matrices and 5 relocation contracts passed; actual image processing smoke passed locally"
+    "Offline 5 platform matrices and 5 relocation contracts passed; actual image processing smoke passed locally",
+    "Push a6cef320a40f525503b0c2620e3af26262b60332 verified on cloud master; CI 34809964613 macOS ARM64 compiled and doctor passed; math zero-relative assertion failed; absolute tolerance repair passes local math_tests."
   ],
   "constraints": [
     "Windows-only interactive menu remains unsupported on macOS",
@@ -32,7 +33,7 @@
     "No Developer ID credentials; ad-hoc signature only, not notarized",
     "req-push-ci-draft authorizes push, CI repairs and manual draft Release after CI success; public publication not authorized"
   ],
-  "next": "Push push-macos-01; inspect CI; then dispatch draft v3.4.0 all platforms",
+  "next": "Push push-macos-02, verify all four CI platforms, then dispatch draft Release v3.4.0 all platforms.",
   "status": "active",
   "integration": "unmerged",
   "acceptance": [
