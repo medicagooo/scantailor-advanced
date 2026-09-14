@@ -9,3 +9,5 @@ Verification: 11 workbench tests passed, then the added image/PDF job-routing te
 Review: one independent review subagent examined the uncommitted changes, menu indices, persistence, routing and locales; no actionable defects found. Dedicated Bugbot tool unavailable; fallback was disclosed. No processing algorithm changes or new distribution package.
 
 Publication: not yet pushed at this checkpoint. Next action: commit only this task's files including op-push intent, then git push origin master, then verify remote refs/heads/master equals HEAD. User requested skipping extra pre-push checks; no manual CI or release dispatch authorized.
+
+Implementation committed to local master at ec92c6f9c8c83177003d423651ca822db0657079. HTTPS push rejected without remote changes because OAuth lacks workflow scope for the earlier release workflow commit. Existing SSH authentication verified; next execute predeclared op-push-ssh and verify remote SHA. No remote configuration change needed.

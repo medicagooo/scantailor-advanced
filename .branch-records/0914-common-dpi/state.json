@@ -1,5 +1,5 @@
 {
-  "next": "Commit implementation and predeclared push intent, then git push origin master; verify returned remote SHA. No extra pre-push checks requested.",
+  "next": "Execute op-push-ssh using existing SSH authentication and verify remote SHA.",
   "status": "complete",
   "requirements": [
     "150/300/600/custom integer 72..1200; draft apply/cancel; actual values; preserve page rules and independent output DPI",
@@ -17,8 +17,9 @@
     "scripts/scantailor_menu/workbench.py",
     "tests/workbench_integration.py",
     "docs/MENU.md",
-    ".branch-records/0914-common-dpi/verification.md"
+    ".branch-records/0914-common-dpi/verification.md",
+    "Local master implementation commit ec92c6f9c8c83177003d423651ca822db0657079"
   ],
   "purpose": "Expose input/render DPI in common settings",
-  "integration": "unmerged"
+  "integration": "verified"
 }

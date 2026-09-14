@@ -165,7 +165,7 @@
       "deployedAt": null
     },
     {
-      "implementedAt": "2026-09-14T11:05:58.3339790+08:00",
+      "implementedAt": "2026-09-14T11:05:58.333979+08:00",
       "integratedAt": null,
       "status": "implemented",
       "deployedAt": null,
@@ -183,6 +183,6 @@
   "format": 1,
   "pending": [
     "0914-cli-screenshots/op-push",
-    "0914-common-dpi/op-push"
+    "0914-common-dpi/op-push-ssh"
   ]
 }
