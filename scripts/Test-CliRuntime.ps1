@@ -27,6 +27,27 @@ try {
     $stdout = $process.StandardOutput.ReadToEndAsync()
     $stderr = $process.StandardError.ReadToEndAsync()
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        # CI-only hang diagnosis: capture stacks without a GUI or publishing an artifact.
+        $debugger = Get-Command gdb.exe -ErrorAction SilentlyContinue
+        if ($env:GITHUB_ACTIONS -eq 'true' -and $debugger) {
+            $debugStart = [Diagnostics.ProcessStartInfo]::new()
+            $debugStart.FileName = $debugger.Source
+            $debugStart.UseShellExecute = $false
+            $debugStart.CreateNoWindow = $true
+            $debugStart.RedirectStandardOutput = $true
+            $debugStart.RedirectStandardError = $true
+            foreach ($arg in @('--batch', '-ex', "attach $($process.Id)", '-ex', 'thread apply all bt', '-ex', 'detach')) {
+                $debugStart.ArgumentList.Add($arg)
+            }
+            $debugProcess = [Diagnostics.Process]::Start($debugStart)
+            try {
+                $debugOut = $debugProcess.StandardOutput.ReadToEndAsync()
+                $debugErr = $debugProcess.StandardError.ReadToEndAsync()
+                if (-not $debugProcess.WaitForExit(15000)) { $debugProcess.Kill($true); $debugProcess.WaitForExit() }
+                Write-Output $debugOut.GetAwaiter().GetResult()
+                Write-Output $debugErr.GetAwaiter().GetResult()
+            } finally { $debugProcess.Dispose() }
+        }
         $process.Kill($true)
         $process.WaitForExit()
         Write-Output $stdout.GetAwaiter().GetResult()

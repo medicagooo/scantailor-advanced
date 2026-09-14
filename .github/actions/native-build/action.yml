@@ -20,7 +20,7 @@ runs:
         msystem: MINGW64
         update: true
         install: >-
-          mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gdb
           mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-svg mingw-w64-x86_64-qt5-tools
           mingw-w64-x86_64-boost mingw-w64-x86_64-libjpeg-turbo
           mingw-w64-x86_64-libpng mingw-w64-x86_64-libtiff mingw-w64-x86_64-zlib
