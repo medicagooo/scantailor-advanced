@@ -7,7 +7,7 @@
     "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage"
   ],
   "constraints": [
-    "Local implementation and commit authorized; no new push or manual dispatch authorized",
+    "Push to origin/master authorized by req-push; manual Actions dispatch is not authorized",
     "GitHub-hosted runners only; retain GUI/CLI independent version constants",
     "Failed multi-platform release stays draft with partial assets; explicit retry replaces only selected-platform assets"
   ],
@@ -28,5 +28,5 @@
     "tests/release_actions_contract.ps1",
     "docs/RELEASE.md"
   ],
-  "next": "Push this task commit to origin/master only when requested. Then review naturally triggered CI; manual Release dispatch requires a specific user request and an existing tag containing this infrastructure."
+  "next": "Execute op-push-01 after registry commit; verify remote master SHA and report CI separately from publication"
 }
