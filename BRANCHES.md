@@ -210,6 +210,22 @@
       "implementedAt": "2026-09-14T12:59:35.0023227+08:00",
       "id": "release-default-version-001",
       "businessChange": "Release tag becomes optional. Blank input reads VERSION from version.h.in and creates missing vVERSION tag at selected run commit. Existing default tag must match commit; explicit input still selects existing tag. All jobs share resolved tag and SHA; Release remains manual and publishes only GitHub Release assets."
+    },
+    {
+      "request": "0914-workflow-consolidation/req-unified-version",
+      "implementedAt": "2026-09-14T13:02:56.5514349+08:00",
+      "date": "2026-09-14",
+      "id": "unified-product-version-001",
+      "domain": "Product version / Release",
+      "evidence": [
+        "version.h.in",
+        "src/cli/main.cpp",
+        "src/app/MainWindow.cpp",
+        "CMakeLists.txt",
+        "docs/RELEASE.md"
+      ],
+      "businessChange": "Supersedes separate GUI 1.2.1 and CLI 3.4.0 versions. Shared VERSION in version.h.in is 3.4.0, consumed by CLI application version, --version, doctor, GUI display, executable resources, CPack and default Release tag. Explicit release tag overrides the same template in build only. Future version bumps change one source.",
+      "status": "implemented"
     }
   ],
   "format": 1,

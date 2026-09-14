@@ -7,12 +7,13 @@
     "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage",
     "Registry file references must use portable forward slashes and validate on Linux",
     "PDF wrapper output lock supports Windows and POSIX while preserving exclusion and crash-release semantics",
-    "Blank Release tag reads VERSION from version.h.in at selected run commit; create missing vVERSION tag, reject existing tag at another commit"
+    "Blank Release tag reads VERSION from version.h.in at selected run commit; create missing vVERSION tag, reject existing tag at another commit",
+    "Single VERSION in version.h.in set to CLI current version 3.4.0; GUI, CLI, package metadata and default Release tag derive from it"
   ],
   "constraints": [
     "Push to origin/master authorized by req-push; manual Actions dispatch is not authorized",
-    "GitHub-hosted runners only; retain GUI/CLI independent version constants",
-    "Failed multi-platform release stays draft with partial assets; explicit retry replaces only selected-platform assets"
+    "Failed multi-platform release stays draft with partial assets; explicit retry replaces only selected-platform assets",
+    "GitHub-hosted runners only; GUI and CLI share version source"
   ],
   "acceptance": [
     "Workflow and PowerShell syntax validate",
@@ -34,7 +35,8 @@
     "tests/pdf_lock_contract.py",
     "CI 34803442919: checks passed; Linux build and five C++ test groups passed; PDF test exposed Windows-only msvcrt import",
     "CI 34803879606: Linux and checks succeeded",
-    "Offline release contract covers blank tag creation, same-commit reuse, collision rejection and invalid VERSION"
+    "Offline release contract covers blank tag creation, same-commit reuse, collision rejection and invalid VERSION",
+    "Native build: CLI --version and doctor 3.4.0; GUI executable ProductVersion 3.4.0 / FileVersion 3.4.0.0; CPack 3.4.0; five CTest groups passed"
   ],
-  "next": "Await explicit push request for optional default-version release change; do not dispatch Release"
+  "next": "Await explicit push request for default-tag and unified-version commits; do not dispatch Release"
 }

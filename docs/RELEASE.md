@@ -48,10 +48,10 @@ Windows 使用同一 MSYS2 MINGW64 包源的 Qt5、GCC、Boost 和图像库，�
 `Build-Windows.ps1`；Linux 使用 Ubuntu 24.04 的开发包。系统库随包源更新，
 不承诺位级可重现构建。Python 固定为 3.12.10，Python 库按 requirements 固定。
 
-`Release-Actions.ps1` 的 Prepare 解析可选标签（默认版本来自 GUI 的 `version.h.in`，不使用 CLI 独立版本常量），输出确定的 tag、commit SHA 和平台矩阵。打包、上传和完成步骤统一使用这些输出。
+`Release-Actions.ps1` 的 Prepare 解析可选标签（GUI、CLI 和默认发布版本统一来自 `version.h.in` 的 `VERSION`，当前沿用 CLI 版本 `3.4.0`），输出确定的 tag、commit SHA 和平台矩阵。打包、上传和完成步骤统一使用这些输出。
 各平台只构建该 SHA。`Package-Actions.ps1` 调用 Windows 打包器，或 Linux CPack/
-linuxdeploy；生成包及 SHA256 文件。标签版本写入构建副本的 GUI 版本模板，CLI 自有
-版本常量保持原样，不提交版本变更回仓库。
+linuxdeploy；生成包及 SHA256 文件。标签版本写入构建副本的统一版本模板，GUI、CLI
+和包元数据同步使用该版本，不提交版本变更回仓库。后续升级只需修改 `version.h.in` 的 `VERSION`。
 
 附件直接上传 GitHub Release，**不使用 Actions artifact 上传或中转**。
 Prepare 先创建草稿，平台任务向草稿上传各自附件；Finalize 仅在全部所选任务成功、
