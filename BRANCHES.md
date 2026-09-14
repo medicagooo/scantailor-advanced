@@ -11,7 +11,8 @@
     "0914-task-reuse": ".branch-records/0914-task-reuse/state.json",
     "0914-cli-languages": ".branch-records\\0914-cli-languages\\state.json",
     "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json",
-    "0914-manual-release": ".branch-records/0914-manual-release/state.json"
+    "0914-manual-release": ".branch-records/0914-manual-release/state.json",
+    "0914-common-dpi": ".branch-records/0914-common-dpi/state.json"
   },
   "active": [
     "0914-cli-screenshots"
@@ -162,10 +163,26 @@
       "implementedAt": "2026-09-14T01:56:13.676561+08:00",
       "integratedAt": "2026-09-14T01:57:41.233301+08:00",
       "deployedAt": null
+    },
+    {
+      "implementedAt": "2026-09-14T11:05:58.3339790+08:00",
+      "integratedAt": null,
+      "status": "implemented",
+      "deployedAt": null,
+      "domain": "CLI workbench",
+      "businessChange": "Add common input DPI (PDF render DPI), presets and custom 72..1200; draft apply/cancel and persistent defaults, retaining page overrides and independent output DPI.",
+      "date": "2026-09-14",
+      "request": "0914-common-dpi/req-implement",
+      "id": "common-input-dpi",
+      "evidence": [
+        "scripts/scantailor_menu/workbench.py",
+        ".branch-records/0914-common-dpi/verification.md"
+      ]
     }
   ],
   "format": 1,
   "pending": [
-    "0914-cli-screenshots/op-push"
+    "0914-cli-screenshots/op-push",
+    "0914-common-dpi/op-push"
   ]
 }

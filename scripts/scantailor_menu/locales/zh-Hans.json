@@ -484,5 +484,9 @@
   "stage.deskew": "纠偏",
   "stage.content": "内容框",
   "stage.layout": "页面布局",
-  "stage.output": "输出"
+  "stage.output": "输出",
+  "common.input_dpi.custom": "自定义…",
+  "common.input_dpi.rules": "部分页面使用独立 DPI",
+  "common.input_dpi.image_hint": "标定图片实际尺寸，不增加原图像素；输出 DPI 单独配置。",
+  "common.input_dpi.pdf_hint": "控制 PDF 转图片的分辨率；提高后会增加处理时间和内存占用。输出 DPI 单独配置。"
 }

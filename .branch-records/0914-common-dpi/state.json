@@ -1,0 +1,24 @@
+{
+  "next": "Commit implementation and predeclared push intent, then git push origin master; verify returned remote SHA. No extra pre-push checks requested.",
+  "status": "complete",
+  "requirements": [
+    "150/300/600/custom integer 72..1200; draft apply/cancel; actual values; preserve page rules and independent output DPI",
+    "Review, repair, commit and push master; skip extra pre-push inspection"
+  ],
+  "constraints": [
+    "Use existing defaults.input.dpi and persistence",
+    "No changes to processing algorithms"
+  ],
+  "acceptance": [
+    "Focused common settings and persistence tests pass",
+    "Independent review completed and findings resolved"
+  ],
+  "evidence": [
+    "scripts/scantailor_menu/workbench.py",
+    "tests/workbench_integration.py",
+    "docs/MENU.md",
+    ".branch-records/0914-common-dpi/verification.md"
+  ],
+  "purpose": "Expose input/render DPI in common settings",
+  "integration": "unmerged"
+}

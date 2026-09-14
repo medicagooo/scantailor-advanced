@@ -484,5 +484,9 @@
   "stage.deskew": "Deskew",
   "stage.content": "Content bounds",
   "stage.layout": "Page layout",
-  "stage.output": "Output"
+  "stage.output": "Output",
+  "common.input_dpi.custom": "Custom…",
+  "common.input_dpi.rules": "Some pages use independent DPI",
+  "common.input_dpi.image_hint": "Sets physical image size; does not add pixels. Output DPI is configured separately.",
+  "common.input_dpi.pdf_hint": "Controls PDF rasterization. Higher DPI uses more time and memory. Output DPI is configured separately."
 }

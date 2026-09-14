@@ -484,5 +484,9 @@
   "stage.deskew": "歪斜校正",
   "stage.content": "內容範圍",
   "stage.layout": "頁面配置",
-  "stage.output": "輸出"
+  "stage.output": "輸出",
+  "common.input_dpi.custom": "自訂…",
+  "common.input_dpi.rules": "部分頁面使用獨立 DPI",
+  "common.input_dpi.image_hint": "標定圖片實際尺寸，不增加原圖像素；輸出 DPI 單獨設定。",
+  "common.input_dpi.pdf_hint": "控制 PDF 轉圖片的解析度；提高後會增加處理時間和記憶體用量。輸出 DPI 單獨設定。"
 }

@@ -132,41 +132,61 @@ class Workbench:
         fields = [(tr('msg_362'), 'deskew', 'mode', ['auto', 'off'], [tr('msg_402'), tr('msg_403')]),
                   (tr('msg_363'), 'split', 'layout', ['single', 'auto', 'two'], [tr('msg_404'), tr('msg_405'), tr('msg_406')]),
                   (tr('msg_364'), 'output', 'mode', ['colorOrGray', 'bw', 'mixed'], [tr('msg_058'), tr('msg_407'), tr('msg_408')]),
+                  (tr('msg_447') if self.m.kind == 'pdf' else tr('msg_035'), 'input', 'dpi', [[150, 150], [300, 300], [600, 600]], ['150', '300', '600']),
                   (tr('msg_365'), 'output', 'dpi', [[150, 150], [300, 300], [600, 600]], [tr('msg_409'), tr('msg_410'), tr('msg_411')])]
         while True:
             labels = []
             for name, section, key, values, names in fields:
                 current = defaults.get(section, {}).get(key)
                 description = names[values.index(current)] if current in values else tr('msg_412')
+                if section == 'input':
+                    description = ('×'.join(map(str, current)) if current and current[0] != current[1]
+                                   else str(current[0]) if current else
+                                   tr('msg_017') if self.m.kind == 'project' else str(self.m.options['dpi']))
+                    if any('dpi' in rule.get('settings', {}).get('input', {}) for rule in draft.get('rules', [])):
+                        description += ' · ' + tr('common.input_dpi.rules')
                 labels.append(f'{name}    {description}')
             index = self.c.choose(tr('msg_346'), labels + [tr('msg_432'), tr('msg_433'), tr('msg_434'), tr('msg_435'), tr('msg_436')],
                                   tr('msg_366'))
-            if index is None or index == 7:
+            if index is None or index == len(fields) + 3:
                 return
-            if index == 8:
+            if index == len(fields) + 4:
                 value = self.encoding(draft.get('image_encoding', {}))
                 if value is not None:
                     draft['image_encoding'] = value
-            elif index < 4:
+            elif index < len(fields):
                 name, section, key, values, names = fields[index]
-                selected = self.c.choose(name, names)
+                if section == 'input':
+                    selected = self.c.choose(name, names + [tr('common.input_dpi.custom')],
+                                             tr('common.input_dpi.pdf_hint' if self.m.kind == 'pdf' else 'common.input_dpi.image_hint'))
+                    if selected == len(values):
+                        current = defaults.get('input', {}).get('dpi')
+                        ok, value = self.ui.edit(name, {'type': 'integer', 'minimum': 72, 'maximum': 1200},
+                                                 current[0] if current else self.m.options['dpi'])
+                        if ok:
+                            # Controller.apply persists this global override and synchronizes
+                            # PDF rendering options; source-page rules remain untouched.
+                            defaults.setdefault('input', {})['dpi'] = [value, value]
+                        continue
+                else:
+                    selected = self.c.choose(name, names)
                 if selected is not None:
                     defaults.setdefault(section, {})[key] = values[selected]
                     if section == 'deskew' and key == 'mode':
                         defaults[section].pop('angle', None)
-            elif index == 4:
+            elif index == len(fields):
                 ok, value = self.ui.edit(tr('msg_114'), {'type': 'number', 'minimum': 0, 'maximum': 100},
                                          defaults.get('layout', {}).get('margins_mm', {}).get('left', 0))
                 if ok:
                     defaults.setdefault('layout', {})['margins_mm'] = {k: value for k in ('left', 'right', 'top', 'bottom')}
                     defaults['layout']['auto_margins'] = False
-            elif index == 5:
+            elif index == len(fields) + 1:
                 selected = self.c.choose(tr('msg_449'), [tr('msg_450'), tr('msg_451')])
                 if selected is not None:
                     # Kept in this form draft until Apply, like processing settings.
                     draft_policy = ['preserve', 'report'][selected]
                     draft['_menu_policy'] = draft_policy
-            elif index == 6:
+            elif index == len(fields) + 2:
                 policy = draft.pop('_menu_policy', self.m.options['review_policy'])
                 self.m.apply(draft)
                 self.m.update_options({'review_policy': policy})

@@ -13,6 +13,7 @@ import time
 import unittest
 import uuid
 import hashlib
+from unittest.mock import Mock
 from contextlib import nullcontext
 sys.path.insert(0, os.environ.get('SCANTAILOR_MENU_ROOT', str(Path(__file__).resolve().parents[1] / 'scripts')))
 from scantailor_menu.editing import Editor, parse_paths, paste_text
@@ -72,7 +73,7 @@ class WorkbenchTests(unittest.TestCase):
             def choose(self, *args, **kwargs):
                 return next(self.choices)
         self.model.apply({'schema_version': 2, 'defaults': {'deskew': {'mode': 'manual', 'angle': 3}, 'layout': {'auto_margins': True}}})
-        self.workbench.c = Choices([0, 0, 4, 6])
+        self.workbench.c = Choices([0, 0, 5, 7])
         self.ui.edit = lambda *args: (True, 7)
         self.workbench.common()
         settings = self.model.config['defaults']
@@ -80,13 +81,95 @@ class WorkbenchTests(unittest.TestCase):
         self.assertFalse(settings['layout']['auto_margins'])
         self.assertEqual(settings['layout']['margins_mm']['left'], 7)
         original = json.loads(json.dumps(self.model.config))
-        self.workbench.c = Choices([0, 1, 7])
+        self.workbench.c = Choices([0, 1, 8])
         self.workbench.common()
         self.assertEqual(self.model.config, original)
         self.model.options['review_policy'] = 'report'
         self.workbench.c = Choices([0])
         self.workbench.schemes()
         self.assertEqual(self.model.options['review_policy'], 'preserve')
+
+    def test_common_input_dpi_draft_persistence_and_rules(self):
+        class Choices:
+            def __init__(self, *choices):
+                self.choices = iter(choices)
+                self.labels = []
+            def choose(self, title, labels, *args):
+                self.labels.append((title, labels))
+                return next(self.choices)
+        self.model.kind = 'images'
+        config = {'schema_version': 2, 'defaults': {'input': {'dpi': [200, 400]},
+                  'output': {'dpi': [600, 600]}}, 'rules': [
+                  {'select': {'images': [1]}, 'settings': {'input': {'dpi': [150, 150]}}}]}
+        self.model.apply(config)
+        saved = self.model.preferences_path.read_bytes()
+        self.workbench.c = Choices(3, 2, 8)
+        self.workbench.common()
+        self.assertEqual(self.model.config, config)
+        self.assertEqual(self.model.preferences_path.read_bytes(), saved)
+        label = self.workbench.c.labels[0][1][3]
+        self.assertIn('200×400', label)
+        self.assertIn('部分页面使用独立 DPI', label)
+        # Applying another field must preserve the existing asymmetric input DPI.
+        self.workbench.c = Choices(0, 0, 7)
+        self.workbench.common()
+        self.assertEqual(self.model.config['defaults']['input']['dpi'], [200, 400])
+        self.model.kind = 'pdf'
+        def edit(title, schema, current):
+            self.assertEqual(title, '渲染 DPI')
+            self.assertEqual((schema['minimum'], schema['maximum']), (72, 1200))
+            return True, 450
+        self.ui.edit = edit
+        self.workbench.c = Choices(3, 3, 7)
+        self.workbench.common()
+        self.assertEqual(self.model.input_dpi(), [450, 450])
+        self.assertEqual(self.model.options['dpi'], 450)
+        self.assertEqual(self.model.config['defaults']['output']['dpi'], [600, 600])
+        self.assertEqual(self.model.config['rules'], config['rules'])
+        restored = Controller(CLI, self.model.home, language='zh-Hans')
+        self.assertEqual(restored.input_dpi(), [450, 450])
+        self.assertEqual(restored.options['dpi'], 450)
+        self.assertEqual(restored.config['defaults']['output']['dpi'], [600, 600])
+
+    def test_common_input_dpi_presets_and_custom_cancel(self):
+        class Choices:
+            def __init__(self, *choices):
+                self.choices = iter(choices)
+            def choose(self, *args):
+                return next(self.choices)
+        for index, dpi in enumerate((150, 300, 600)):
+            self.workbench.c = Choices(3, index, 7)
+            self.workbench.common()
+            self.assertEqual(self.model.input_dpi(), [dpi, dpi])
+        self.ui.edit = lambda *args: (False, None)
+        self.workbench.c = Choices(3, 3, 7)
+        self.workbench.common()
+        self.assertEqual(self.model.input_dpi(), [600, 600])
+
+    def test_common_input_dpi_reaches_image_and_pdf_jobs(self):
+        import pymupdf
+        image = self.fixture('dpi.png')
+        pdf = self.root / 'dpi.pdf'
+        with pymupdf.open() as document:
+            document.new_page()
+            document.save(pdf)
+        class Choices:
+            def __init__(self):
+                self.choices = iter((3, 0, 7))
+            def choose(self, *args):
+                return next(self.choices)
+        for kind, source in (('images', image), ('pdf', pdf)):
+            self.model.select(kind, [source])
+            self.model.output = str(self.root / kind)
+            self.workbench.c = Choices()
+            self.workbench.common()
+            self.model.launch = Mock()
+            self.model.start()
+            job, args = self.model.launch.call_args.args
+            snapshot = json.loads((Path(job['folder']) / 'settings.json').read_text(encoding='utf-8'))
+            self.assertEqual(snapshot['defaults']['input']['dpi'], [150, 150])
+            if kind == 'pdf':
+                self.assertEqual(args[args.index('--dpi') + 1], '150')
 
     def fixture(self, name):
         from PIL import Image
