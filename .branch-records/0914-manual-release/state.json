@@ -1,0 +1,25 @@
+{
+  "purpose": "Configure manual GitHub Release dispatch",
+  "requirements": [
+    "Release runs only through workflow_dispatch on GitHub-hosted runners",
+    "Require an existing version tag and build its resolved commit",
+    "Keep current Linux assets; default to draft Release"
+  ],
+  "constraints": [
+    "No push, tag creation, workflow dispatch or remote publication authorized in this task",
+    "Preserve separate CLI and GUI versions; no Windows pipeline implementation in this trigger change"
+  ],
+  "acceptance": [
+    "No push trigger in Release",
+    "Validated tag controls source checkout, version and release target",
+    "Workflow syntax and registry validation pass"
+  ],
+  "status": "complete",
+  "integration": "unmerged",
+  "evidence": [
+    ".github/workflows/release.yml",
+    "docs/RELEASE.md",
+    "Local validation: YAML parsing, dispatch-only trigger, pinned source SHA, job dependencies, permissions, git diff --check and registry validator passed"
+  ],
+  "next": "User-authorized push of the committed configuration to origin/master; actual GitHub build remains unverified and requires a separately requested manual run."
+}

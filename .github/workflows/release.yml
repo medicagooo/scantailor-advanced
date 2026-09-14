@@ -1,24 +1,62 @@
-# Release: build .deb, AppImage and attach to GitHub Release on version tag (issues #64, #37)
+# Manual Linux release. Source/tag contract and operator steps: docs/RELEASE.md.
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (vMAJOR.MINOR.PATCH)'
+        required: true
+        type: string
+      draft:
+        description: 'Create a draft Release for review'
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  prepare:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Resolve existing version tag
+        id: source
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+            throw 'Expected an existing vMAJOR.MINOR.PATCH tag.'
+          }
+          $sha = git rev-parse --verify "refs/tags/$($env:RELEASE_TAG)^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'Release tag does not exist or does not point to a commit.' }
+          "sha=$sha" >> $env:GITHUB_OUTPUT
+
   build-deb:
     name: Build .deb
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Set version from tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${RELEASE_TAG#v}"
           sed -i "s/^#define VERSION \"[^\"]*\"/#define VERSION \"${VERSION}\"/" version.h.in
 
       - name: Install dependencies
@@ -38,16 +76,22 @@ jobs:
         with:
           name: deb-package
           path: scantailor-advanced_*_amd64.deb
+          if-no-files-found: error
 
   build-appimage:
     name: Build AppImage
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Set version from tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${RELEASE_TAG#v}"
           sed -i "s/^#define VERSION \"[^\"]*\"/#define VERSION \"${VERSION}\"/" version.h.in
 
       - name: Install dependencies
@@ -76,7 +120,7 @@ jobs:
 
       - name: Build AppImage
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ inputs.tag }}
           DISABLE_COPYRIGHT_FILES_DEPLOYMENT: 1
         run: |
           cd build-appimage
@@ -84,18 +128,21 @@ jobs:
           # Bundle Qt platform plugins (e.g. xcb) via linuxdeploy-plugin-qt; same-dir discovery.
           ../linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt -e AppDir/usr/bin/scantailor-advanced --output appimage
           OUT=$(ls -1 *.AppImage 2>/dev/null | head -1)
-          mv "$OUT" "../scantailor-advanced-${{ github.ref_name }}-x86_64.AppImage"
+          mv "$OUT" "../scantailor-advanced-${VERSION}-x86_64.AppImage"
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v5
         with:
           name: appimage
           path: scantailor-advanced-*-x86_64.AppImage
+          if-no-files-found: error
 
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-deb, build-appimage]
+    needs: [prepare, build-deb, build-appimage]
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v5
         with:
@@ -107,10 +154,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag }}
+          target_commitish: ${{ needs.prepare.outputs.sha }}
           files: |
             scantailor-advanced_*_amd64.deb
             scantailor-advanced-*-x86_64.AppImage
           generate_release_notes: true
-          draft: false
+          draft: ${{ inputs.draft }}
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

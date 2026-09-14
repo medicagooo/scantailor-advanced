@@ -10,7 +10,8 @@
     "0913-readme": ".branch-records\\0913-readme/state.json",
     "0914-task-reuse": ".branch-records/0914-task-reuse/state.json",
     "0914-cli-languages": ".branch-records\\0914-cli-languages\\state.json",
-    "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json"
+    "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json",
+    "0914-manual-release": ".branch-records/0914-manual-release/state.json"
   },
   "active": [
     "0914-cli-screenshots"
