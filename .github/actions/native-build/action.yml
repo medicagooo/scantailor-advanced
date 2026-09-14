@@ -32,6 +32,29 @@ runs:
         if ($LASTEXITCODE -ne 0) { throw 'apt update failed' }
         sudo apt-get install -y build-essential cmake ninja-build qtbase5-dev libqt5opengl5-dev libqt5svg5-dev qttools5-dev qttools5-dev-tools libboost-test-dev libboost-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev file
         if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed' }
+    - name: Install macOS Qt
+      if: runner.os == 'macOS'
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.8.3'
+        host: mac
+        target: desktop
+        arch: clang_64
+        cache: true
+        setup-python: false
+    - name: Install macOS dependencies
+      if: runner.os == 'macOS'
+      shell: pwsh
+      run: |
+        brew install cmake ninja boost jpeg-turbo libpng libtiff
+        if ($LASTEXITCODE -ne 0) { throw 'Homebrew dependency install failed' }
+        $qtRoot = $env:QT_ROOT_DIR
+        if (-not $qtRoot) { throw 'Cannot locate installed Qt' }
+        $brewRoot = brew --prefix
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot locate Homebrew' }
+        "MACOS_QT_ROOT=$qtRoot" >> $env:GITHUB_ENV
+        "MACOS_BREW_ROOT=$brewRoot" >> $env:GITHUB_ENV
+        "$qtRoot/bin" >> $env:GITHUB_PATH
     - name: Build and optionally check
       shell: pwsh
       env:

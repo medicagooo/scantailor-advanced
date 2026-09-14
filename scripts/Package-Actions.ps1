@@ -20,7 +20,11 @@ if ($IsWindows) {
     $package = Join-Path $source "out/ScanTailor-$tag-windows-x64"
     & "$PSScriptRoot/Package-Windows.ps1" -BuildDir $build -Destination $package -QtRoot $root -CompilerRoot $root -NativeRoot $root -PythonEmbedZip $embed -PythonPackagesRoot $packages
     Compress-Archive -LiteralPath $package -DestinationPath "$out/ScanTailor-$tag-windows-x64.zip"
-} else {
+} elseif ($IsMacOS) {
+    $arch = if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x64' }
+    $platform = "macos-$arch"
+    & "$PSScriptRoot/Package-MacOS.ps1" -BuildDir $build -Destination (Join-Path $source "out/ScanTailor-$tag-$platform") -OutputDir $out -Tag $tag -Architecture $arch -QtRoot $env:MACOS_QT_ROOT -Python $env:CI_PYTHON
+} elseif ($IsLinux) {
     $platform = 'linux'
     Push-Location $build
     try {
@@ -45,8 +49,8 @@ if ($IsWindows) {
         & ./linuxdeploy-x86_64.AppImage --appdir $appDir --plugin qt --executable "$appDir/usr/bin/scantailor-advanced" --executable "$appDir/usr/bin/scantailor-cli" --output appimage
         if ($LASTEXITCODE -ne 0) { throw 'AppImage packaging failed' }
     } finally { Pop-Location }
-}
-$assets = @(Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in @('.zip', '.deb', '.AppImage') })
+} else { throw 'Unsupported packaging OS' }
+$assets = @(Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in @('.zip', '.deb', '.AppImage', '.dmg') })
 $expectedCount = if ($IsWindows) { 1 } else { 2 }
 if ($assets.Count -ne $expectedCount -or @($assets | Where-Object Length -eq 0).Count) { throw 'Missing or empty package outputs' }
 $assets | ForEach-Object { "$((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" } |

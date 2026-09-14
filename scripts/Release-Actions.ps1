@@ -38,10 +38,12 @@ function Get-CheckedDraft([string]$Sha) {
 }
 if ($Phase -eq 'Prepare') {
     $platforms = switch ($env:RELEASE_PLATFORM) {
-        'all' { @('windows', 'linux') }
+        'all' { @('windows', 'linux', 'macos-arm64', 'macos-x64') }
         'windows' { @('windows') }
         'linux' { @('linux') }
-        default { throw 'Select all, windows or linux' }
+        'macos-arm64' { @('macos-arm64') }
+        'macos-x64' { @('macos-x64') }
+        default { throw 'Select all, windows, linux, macos-arm64 or macos-x64' }
     }
     if ($automaticTag) {
         $sha = git rev-parse --verify HEAD
@@ -58,6 +60,12 @@ if ($Phase -eq 'Prepare') {
         git cat-file -e "${sha}:$path"
         if ($LASTEXITCODE -ne 0) { throw "Tag lacks release infrastructure: $path" }
     }
+    if (@($platforms | Where-Object { $_ -like 'macos-*' }).Count) {
+        foreach ($path in @('scripts/Package-MacOS.ps1', 'scripts/relocate_macos.py', 'docs/MACOS.md')) {
+            git cat-file -e "${sha}:$path"
+            if ($LASTEXITCODE -ne 0) { throw "Tag lacks macOS release infrastructure: $path" }
+        }
+    }
     if ($automaticTag -and -not $remoteRef) {
         gh api "repos/$repo/git/refs" --method POST -f "ref=refs/tags/$tag" -f "sha=$sha"
         if ($LASTEXITCODE -ne 0) { throw 'Version tag creation failed; no existing tag is overwritten' }
@@ -72,7 +80,8 @@ if ($Phase -eq 'Prepare') {
         gh release create $tag --repo $repo --verify-tag --draft --title $tag --generate-notes --notes-file $notes
         if ($LASTEXITCODE -ne 0) { throw 'Draft creation failed' }
     }
-    $include = @($platforms | ForEach-Object { @{platform=$_;os=$(if ($_ -eq 'windows') {'windows-2022'} else {'ubuntu-24.04'})} })
+    $runners = @{windows='windows-2022';linux='ubuntu-24.04';'macos-arm64'='macos-15';'macos-x64'='macos-15-intel'}
+    $include = @($platforms | ForEach-Object { @{platform=$_;os=$runners[$_]} })
     "tag=$tag" >> $env:GITHUB_OUTPUT
     "sha=$sha" >> $env:GITHUB_OUTPUT
     "matrix=$(@{include=$include} | ConvertTo-Json -Depth 4 -Compress)" >> $env:GITHUB_OUTPUT
@@ -91,6 +100,11 @@ if ($Phase -eq 'Upload') {
 $expected = @()
 if ($env:RELEASE_PLATFORM -in @('all', 'windows')) { $expected += "ScanTailor-$tag-windows-x64.zip", 'SHA256SUMS-windows.txt' }
 if ($env:RELEASE_PLATFORM -in @('all', 'linux')) { $expected += "ScanTailor-$tag-linux-x64.deb", "ScanTailor-$tag-linux-x64.AppImage", 'SHA256SUMS-linux.txt' }
+foreach ($macPlatform in @('macos-arm64', 'macos-x64')) {
+    if ($env:RELEASE_PLATFORM -in @('all', $macPlatform)) {
+        $expected += "ScanTailor-$tag-$macPlatform.zip", "ScanTailor-$tag-$macPlatform.dmg", "SHA256SUMS-$macPlatform.txt"
+    }
+}
 if ($expected.Count -eq 0) { throw 'Invalid platform selection' }
 foreach ($name in $expected) {
     if (-not ($release.assets | Where-Object { $_.name -ceq $name -and $_.size -gt 0 })) { throw "Missing release asset: $name" }

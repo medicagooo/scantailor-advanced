@@ -56,14 +56,16 @@ try {
     $env:RUNNER_TEMP=$scratch; $env:GITHUB_OUTPUT=Join-Path $scratch 'outputs'
     $env:GITHUB_STEP_SUMMARY=Join-Path $scratch 'summary'
     $env:RELEASE_SHA=$global:ReleaseContract_sha; $env:KEEP_DRAFT='false'
-    foreach ($platform in @('windows','linux','all')) {
+    foreach ($platform in @('windows','linux','macos-arm64','macos-x64','all')) {
         $env:RELEASE_PLATFORM=$platform
         Set-Content -LiteralPath $env:GITHUB_OUTPUT -Value ''
         & $releaseScript -Phase Prepare
         $line=Get-Content -LiteralPath $env:GITHUB_OUTPUT | Where-Object { $_.StartsWith('matrix=') }
         $matrix=$line.Substring(7) | ConvertFrom-Json
-        $expected=if ($platform -eq 'all') { @('windows','linux') } else { @($platform) }
+        $expected=if ($platform -eq 'all') { @('windows','linux','macos-arm64','macos-x64') } else { @($platform) }
         if (($matrix.include.platform -join ',') -ne ($expected -join ',')) { throw 'Platform matrix mismatch' }
+        $runnerMap=@{windows='windows-2022';linux='ubuntu-24.04';'macos-arm64'='macos-15';'macos-x64'='macos-15-intel'}
+        foreach ($entry in $matrix.include) { if ($entry.os -ne $runnerMap[$entry.platform]) { throw 'Runner architecture mismatch' } }
     }
     if (-not $global:ReleaseContract_created) { throw 'Draft not created' }
     Set-Content -LiteralPath "$scratch/version.h.in" -Value '#define VERSION "3.4.0"'
@@ -101,13 +103,20 @@ try {
     $global:ReleaseContract_assetNames=@('ScanTailor-v3.4.0-windows-x64.zip','SHA256SUMS-windows.txt')
     Assert-Fails { & $releaseScript -Phase Finalize } 'missing selected Linux assets'
     $global:ReleaseContract_assetNames+=@('ScanTailor-v3.4.0-linux-x64.deb','ScanTailor-v3.4.0-linux-x64.AppImage','SHA256SUMS-linux.txt')
+    Assert-Fails { & $releaseScript -Phase Finalize } 'missing selected macOS assets'
+    foreach ($macPlatform in @('macos-arm64','macos-x64')) {
+        $global:ReleaseContract_assetNames+=@("ScanTailor-v3.4.0-$macPlatform.zip","ScanTailor-v3.4.0-$macPlatform.dmg","SHA256SUMS-$macPlatform.txt")
+        $env:RELEASE_PLATFORM=$macPlatform; $env:KEEP_DRAFT='true'
+        & $releaseScript -Phase Finalize
+    }
+    $env:RELEASE_PLATFORM='all'
     $env:KEEP_DRAFT='true'
     & $releaseScript -Phase Finalize
     if ($global:ReleaseContract_published) { throw 'Draft was unexpectedly published' }
     $env:KEEP_DRAFT='false'
     & $releaseScript -Phase Finalize
     if (-not $global:ReleaseContract_published) { throw 'Complete release not published' }
-    Write-Output 'Release contracts passed: 3 matrices, draft retry, input guards, published-release guard, moved tag, empty/direct upload, missing assets, draft/public finalize.'
+    Write-Output 'Release contracts passed: 5 matrices/runner mappings, automatic version tags, draft retry, input guards, published-release guard, moved tag, empty/direct upload, missing macOS assets, draft/public finalize.'
 } finally {
     foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name,$saved[$name]) }
     Get-Variable -Name 'ReleaseContract_*' -Scope Global | Remove-Variable -Scope Global

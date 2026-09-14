@@ -13,7 +13,8 @@
     "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json",
     "0914-manual-release": ".branch-records/0914-manual-release/state.json",
     "0914-common-dpi": ".branch-records/0914-common-dpi/state.json",
-    "0914-workflow-consolidation": ".branch-records/0914-workflow-consolidation/state.json"
+    "0914-workflow-consolidation": ".branch-records/0914-workflow-consolidation/state.json",
+    "0914-macos-release": ".branch-records/0914-macos-release/state.json"
   },
   "active": [
     "0914-cli-screenshots"
@@ -226,6 +227,21 @@
       ],
       "businessChange": "Supersedes separate GUI 1.2.1 and CLI 3.4.0 versions. Shared VERSION in version.h.in is 3.4.0, consumed by CLI application version, --version, doctor, GUI display, executable resources, CPack and default Release tag. Explicit release tag overrides the same template in build only. Future version bumps change one source.",
       "status": "implemented"
+    },
+    {
+      "date": "2026-09-14",
+      "domain": "Build / macOS distribution",
+      "request": "0914-macos-release/req-macos",
+      "businessChange": "Extends Windows/Linux CI and manual Release with macOS ARM64/Intel. GUI app includes ordinary CLI and PDF scripts; Windows terminal menu remains unavailable. all selects four platforms. macOS ZIP/DMG are dependency-audited and ad-hoc signed, not notarized; Python PDF dependencies installed separately. macOS native validation pending.",
+      "id": "macos-release-001",
+      "evidence": [
+        ".branch-records/0914-macos-release/state.json",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        "docs/MACOS.md"
+      ],
+      "status": "implemented_pending_native_validation",
+      "implementedAt": "2026-09-14T13:19:52.3112737+08:00"
     }
   ],
   "format": 1,

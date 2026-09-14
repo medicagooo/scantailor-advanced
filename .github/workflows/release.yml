@@ -11,7 +11,7 @@ on:
         description: 'Platform to compile and publish'
         required: true
         type: choice
-        options: [all, windows, linux]
+        options: [all, windows, linux, macos-arm64, macos-x64]
         default: all
       draft:
         description: 'Keep as draft after all selected platforms succeed'

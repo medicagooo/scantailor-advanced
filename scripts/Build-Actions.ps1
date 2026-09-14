@@ -11,7 +11,13 @@ if ($IsWindows) {
     & "$PSScriptRoot/Build-Windows.ps1" -QtRoot $root -BoostRoot $root -NativeRoot $root -CompilerRoot $root -BuildDir $build -WithTests:$Check
 } else {
     $tests = if ($Check) { 'ON' } else { 'OFF' }
-    cmake -S $source -B $build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_CLI=ON "-DBUILD_TESTS=$tests" -DENABLE_NATIVE_ARCH=OFF -DCMAKE_INSTALL_PREFIX=/usr
+    $platformOptions = @('-DCMAKE_INSTALL_PREFIX=/usr')
+    if ($IsMacOS) {
+        $architecture = if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq 'Arm64') { 'arm64' } else { 'x86_64' }
+        # Homebrew bottles target the runner OS; do not promise older macOS support.
+        $platformOptions = @("-DCMAKE_PREFIX_PATH=$env:MACOS_QT_ROOT;$env:MACOS_BREW_ROOT", "-DCMAKE_OSX_ARCHITECTURES=$architecture", '-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0', '-DPORTABLE_VERSION=OFF', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5')
+    }
+    cmake -S $source -B $build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_CLI=ON "-DBUILD_TESTS=$tests" -DENABLE_NATIVE_ARCH=OFF @platformOptions
     if ($LASTEXITCODE -ne 0) { throw 'Configure failed' }
     cmake --build $build --parallel 4
     if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
@@ -34,7 +40,14 @@ if ($Check) {
     $suites = @('cli_integration', 'cli_full_integration', 'image_encoding_integration')
     if ($IsWindows) { $suites += @('menu_integration', 'workbench_integration', 'completion_ui_integration', 'task_reuse_integration', 'language_integration') }
     foreach ($suite in $suites) {
-        & $env:CI_PYTHON "$source/tests/$suite.py" --cli $cli
+        $suiteOptions = @()
+        if ($IsMacOS -and $suite -eq 'cli_full_integration') { $suiteOptions = @('--gui', "$build/scantailor-gui-roundtrip") }
+        & $env:CI_PYTHON "$source/tests/$suite.py" --cli $cli @suiteOptions
         if ($LASTEXITCODE -ne 0) { throw "Integration tests failed: $suite" }
+    }
+    if ($IsMacOS) {
+        $version = [regex]::Match((Get-Content -LiteralPath "$source/version.h.in" -Raw), '(?m)^#define VERSION "([^"]+)"').Groups[1].Value
+        $arch = if ($architecture -eq 'arm64') { 'arm64' } else { 'x64' }
+        & "$PSScriptRoot/Package-MacOS.ps1" -BuildDir $build -Destination (Join-Path $env:RUNNER_TEMP ('macos-runtime-' + [guid]::NewGuid())) -Tag "v$version" -Architecture $arch -QtRoot $env:MACOS_QT_ROOT -Python $env:CI_PYTHON -CheckOnly
     }
 }

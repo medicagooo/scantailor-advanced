@@ -1,0 +1,44 @@
+{
+  "purpose": "Add macOS ARM64/Intel GUI CLI and PDF build/release support",
+  "requirements": [
+    "Keep exactly CI and manual Release workflows",
+    "Use GitHub-hosted macos-15 ARM64 and macos-15-intel x64 runners",
+    "Build Qt6 GUI app bundle and ordinary CLI; Python PDF wrapper supported with separately installed dependencies",
+    "Create architecture-specific ZIP/DMG and checksums only on Release",
+    "Review for bugs, repair and commit"
+  ],
+  "evidence": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    ".github/actions/native-build/action.yml",
+    "scripts/Build-Actions.ps1",
+    "scripts/Package-Actions.ps1",
+    "scripts/Package-MacOS.ps1",
+    "scripts/relocate_macos.py",
+    "scripts/Release-Actions.ps1",
+    "src/app/CMakeLists.txt",
+    "tests/release_actions_contract.ps1",
+    "tests/macos_relocation_contract.py",
+    "tests/macos_runtime_smoke.py",
+    "docs/MACOS.md",
+    "docs/RELEASE.md",
+    "Independent Bugbot-style review completed; no remaining confirmed defects",
+    "Windows native build and 5 CTest groups passed",
+    "Offline 5 platform matrices and 5 relocation contracts passed; actual image processing smoke passed locally"
+  ],
+  "constraints": [
+    "No push or manual workflow dispatch authorized in this instruction",
+    "Windows-only interactive menu remains unsupported on macOS",
+    "Version remains shared at 3.4.0",
+    "No Developer ID credentials; ad-hoc signature only, not notarized"
+  ],
+  "next": "Await explicit push; after authorized push inspect automatic macOS ARM64/Intel CI. Actual macOS compilation/signing/packaging not yet verified.",
+  "status": "complete",
+  "integration": "unmerged",
+  "acceptance": [
+    "Offline contracts and syntax validators pass",
+    "Windows regression build remains valid",
+    "One independent bug review and repair",
+    "macOS native verification runs in CI when later pushed; do not claim local Mac execution"
+  ]
+}
