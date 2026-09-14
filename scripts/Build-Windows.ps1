@@ -31,7 +31,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
     # Qt5 DLLs copied beside the EXE change Qt's relative plugin lookup prefix.
     # Deploy plugins before doctor/tests, just as the portable packaging path does.
-    & "$qtPath/bin/windeployqt.exe" --release --no-translations --dir $BuildDir `
+    # MSYS2 suffixes Qt5 tools so they can coexist with Qt6.
+    $deployQt = Join-Path $qtPath 'bin/windeployqt.exe'
+    if (-not (Test-Path -LiteralPath $deployQt)) { $deployQt = Join-Path $qtPath 'bin/windeployqt-qt5.exe' }
+    & $deployQt --release --no-translations --dir $BuildDir `
         (Join-Path $BuildDir 'scantailor-cli.exe') (Join-Path $BuildDir 'scantailor-advanced.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Build runtime deployment failed' }
     $offscreen = Join-Path $qtPath 'plugins/platforms/qoffscreen.dll'
