@@ -26,7 +26,12 @@ try {
     & (Join-Path $qtPath 'bin/windeployqt.exe') --release --no-translations --dir $packagePath `
         (Join-Path $packagePath 'scantailor-cli.exe') (Join-Path $packagePath 'scantailor-advanced.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Qt deployment failed' }
-    Copy-Item -LiteralPath (Join-Path $qtPath 'plugins/platforms/qoffscreen.dll') -Destination (Join-Path $packagePath 'platforms')
+    # Official Qt uses plugins/; the MSYS2 Qt5 build used by Actions uses share/qt5/plugins/.
+    $offscreen = Join-Path $qtPath 'plugins/platforms/qoffscreen.dll'
+    if (-not (Test-Path -LiteralPath $offscreen)) {
+        $offscreen = Join-Path $qtPath 'share/qt5/plugins/platforms/qoffscreen.dll'
+    }
+    Copy-Item -LiteralPath $offscreen -Destination (Join-Path $packagePath 'platforms')
     # Follow PE imports so libtiff's compression DLLs are included as well.
     # Never copy system DLLs or resolve a library from an unrelated PATH entry.
     $queue = [Collections.Generic.Queue[string]]::new()

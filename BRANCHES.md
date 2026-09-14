@@ -12,7 +12,8 @@
     "0914-cli-languages": ".branch-records\\0914-cli-languages\\state.json",
     "0914-cli-screenshots": ".branch-records/0914-cli-screenshots/state.json",
     "0914-manual-release": ".branch-records/0914-manual-release/state.json",
-    "0914-common-dpi": ".branch-records/0914-common-dpi/state.json"
+    "0914-common-dpi": ".branch-records/0914-common-dpi/state.json",
+    "0914-workflow-consolidation": ".branch-records/0914-workflow-consolidation/state.json"
   },
   "active": [
     "0914-cli-screenshots"

@@ -1,35 +1,75 @@
-# CI: build on push and PR to main/master
 name: CI
-
 on:
   push:
     branches: [master, main]
   pull_request:
     branches: [master, main]
-
+permissions:
+  contents: read
 jobs:
-  build-linux:
-    name: Build (Ubuntu)
-    runs-on: ubuntu-latest
+  checks:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v5
-
-      - name: Install dependencies
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Registry and Python syntax
+        run: |
+          python scripts/validate_registry.py
+          if ($LASTEXITCODE -ne 0) { throw 'Registry validation failed' }
+          python -m compileall -q scripts tests
+          if ($LASTEXITCODE -ne 0) { throw 'Python syntax validation failed' }
+      - name: Install formatter
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential cmake \
-            qt5-qmake qtbase5-dev libqt5svg5-dev qttools5-dev \
-            libboost-test-dev libboost-dev \
-            libjpeg-dev libpng-dev libtiff-dev zlib1g-dev
-
-      - name: Configure and build
+          if ($LASTEXITCODE -ne 0) { throw 'apt update failed' }
+          sudo apt-get install -y clang-format-18
+          if ($LASTEXITCODE -ne 0) { throw 'Formatter install failed' }
+      - name: PowerShell syntax and offline release contracts
         run: |
-          mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release ..
-          make -j$(nproc)
-
-      - name: Run tests
+          foreach ($file in @(Get-ChildItem scripts,tests -Filter '*.ps1' -File)) {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { throw ($errors | Out-String) }
+          }
+          & ./tests/release_actions_contract.ps1
+      - name: Check changed C++ files
+        env:
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          cd build
-          ctest -C Release --output-on-failure || true
+          $base = $env:DIFF_BASE
+          if (-not $base -or $base -match '^0+$') {
+            $files = @(git ls-files -- src/)
+          } else {
+            $files = @(git diff --name-only --diff-filter=ACMR $base HEAD -- src/)
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Changed file discovery failed' }
+          foreach ($file in $files) {
+            if ($file -match '\.(cpp|h)$' -and $file -notmatch '/translations/') {
+              & clang-format-18 --dry-run -Werror -- $file
+              if ($LASTEXITCODE -ne 0) { throw "Formatting failed: $file" }
+            }
+          }
+  build-test:
+    name: Check (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-2022
+          - platform: linux
+            os: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/native-build
+        with:
+          check: 'true'

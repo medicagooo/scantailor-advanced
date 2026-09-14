@@ -1,166 +1,94 @@
-# Manual Linux release. Source/tag contract and operator steps: docs/RELEASE.md.
+# Direct draft asset uploads avoid Actions artifacts. Failure/retry contract: docs/RELEASE.md.
 name: Release
-
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag (vMAJOR.MINOR.PATCH)'
+        description: 'Existing tag (vMAJOR.MINOR.PATCH), including these build scripts'
         required: true
         type: string
+      platform:
+        description: 'Platform to compile and publish'
+        required: true
+        type: choice
+        options: [all, windows, linux]
+        default: all
       draft:
-        description: 'Create a draft Release for review'
+        description: 'Keep as draft after all selected platforms succeed'
         type: boolean
         default: true
-
+permissions:
+  contents: read
 concurrency:
   group: release-${{ inputs.tag }}
   cancel-in-progress: false
-
-permissions:
-  contents: read
-
+defaults:
+  run:
+    shell: pwsh
 jobs:
   prepare:
-    name: Validate release source
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     outputs:
-      sha: ${{ steps.source.outputs.sha }}
+      sha: ${{ steps.prepare.outputs.sha }}
+      matrix: ${{ steps.prepare.outputs.matrix }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Resolve existing version tag
-        id: source
-        shell: pwsh
+      - name: Validate source and prepare draft
+        id: prepare
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          if ($env:RELEASE_TAG -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
-            throw 'Expected an existing vMAJOR.MINOR.PATCH tag.'
-          }
-          $sha = git rev-parse --verify "refs/tags/$($env:RELEASE_TAG)^{commit}"
-          if ($LASTEXITCODE -ne 0) { throw 'Release tag does not exist or does not point to a commit.' }
-          "sha=$sha" >> $env:GITHUB_OUTPUT
-
-  build-deb:
-    name: Build .deb
+          RELEASE_PLATFORM: ${{ inputs.platform }}
+        run: ./scripts/Release-Actions.ps1 -Phase Prepare
+  build:
+    name: Publish assets (${{ matrix.platform }})
     needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.prepare.outputs.sha }}
-
-      - name: Set version from tag
-        env:
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          VERSION="${RELEASE_TAG#v}"
-          sed -i "s/^#define VERSION \"[^\"]*\"/#define VERSION \"${VERSION}\"/" version.h.in
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential cmake \
-            qt5-qmake qtbase5-dev libqt5svg5-dev qttools5-dev \
-            libboost-test-dev libboost-dev \
-            libjpeg-dev libpng-dev libtiff-dev zlib1g-dev
-
-      - name: Build .deb
-        run: ./build-deb.sh build
-
-      - name: Upload .deb artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: deb-package
-          path: scantailor-advanced_*_amd64.deb
-          if-no-files-found: error
-
-  build-appimage:
-    name: Build AppImage
-    needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.prepare.outputs.sha }}
-
-      - name: Set version from tag
-        env:
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          VERSION="${RELEASE_TAG#v}"
-          sed -i "s/^#define VERSION \"[^\"]*\"/#define VERSION \"${VERSION}\"/" version.h.in
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential cmake \
-            qt5-qmake qtbase5-dev libqt5svg5-dev qttools5-dev \
-            libboost-test-dev libboost-dev \
-            libjpeg-dev libpng-dev libtiff-dev zlib1g-dev \
-            file
-
-      - name: Build and install to AppDir
-        run: |
-          mkdir build-appimage && cd build-appimage
-          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr ..
-          make -j$(nproc)
-          make install DESTDIR=AppDir
-
-      - name: Download linuxdeploy
-        run: |
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy-plugin-qt-x86_64.AppImage
-
-      - name: Build AppImage
-        env:
-          VERSION: ${{ inputs.tag }}
-          DISABLE_COPYRIGHT_FILES_DEPLOYMENT: 1
-        run: |
-          cd build-appimage
-          export QMAKE=/usr/bin/qmake
-          # Bundle Qt platform plugins (e.g. xcb) via linuxdeploy-plugin-qt; same-dir discovery.
-          ../linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt -e AppDir/usr/bin/scantailor-advanced --output appimage
-          OUT=$(ls -1 *.AppImage 2>/dev/null | head -1)
-          mv "$OUT" "../scantailor-advanced-${VERSION}-x86_64.AppImage"
-
-      - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: appimage
-          path: scantailor-advanced-*-x86_64.AppImage
-          if-no-files-found: error
-
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [prepare, build-deb, build-appimage]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/checkout@v5
         with:
-          name: deb-package
-      - uses: actions/download-artifact@v5
-        with:
-          name: appimage
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.tag }}
-          target_commitish: ${{ needs.prepare.outputs.sha }}
-          files: |
-            scantailor-advanced_*_amd64.deb
-            scantailor-advanced-*-x86_64.AppImage
-          generate_release_notes: true
-          draft: ${{ inputs.draft }}
-          fail_on_unmatched_files: true
+          ref: ${{ needs.prepare.outputs.sha }}
+      - name: Set package version
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          $file = Join-Path $PWD 'version.h.in'
+          $text = Get-Content -LiteralPath $file -Raw
+          $text = $text -replace '(?m)^#define VERSION "[^"]*"', ('#define VERSION "' + $env:RELEASE_TAG.Substring(1) + '"')
+          Set-Content -LiteralPath $file -Value $text -NoNewline
+      - uses: ./.github/actions/native-build
+      - name: Package and validate runtime
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: ./scripts/Package-Actions.ps1
+      - name: Upload only to draft Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+        run: ./scripts/Release-Actions.ps1 -Phase Upload
+  finalize:
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Finalize selected platform release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+          RELEASE_PLATFORM: ${{ inputs.platform }}
+          KEEP_DRAFT: ${{ inputs.draft }}
+        run: ./scripts/Release-Actions.ps1 -Phase Finalize

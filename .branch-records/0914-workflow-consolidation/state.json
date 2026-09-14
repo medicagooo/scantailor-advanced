@@ -1,0 +1,32 @@
+{
+  "purpose": "Consolidate checks and selectable-platform release workflows",
+  "requirements": [
+    "Exactly CI and Release workflow files",
+    "CI checks Windows and Linux builds, tests, formatting and registry without publishing assets",
+    "Manual Release selects windows/linux/all and uploads only to GitHub Releases",
+    "Reuse native scripts; Windows ZIP includes embedded Python; Linux DEB and AppImage"
+  ],
+  "constraints": [
+    "Local implementation and commit authorized; no new push or manual dispatch authorized",
+    "GitHub-hosted runners only; retain GUI/CLI independent version constants",
+    "Failed multi-platform release stays draft with partial assets; explicit retry replaces only selected-platform assets"
+  ],
+  "acceptance": [
+    "Workflow and PowerShell syntax validate",
+    "All platform selection cases and release source/asset contracts checked",
+    "No Actions artifact uploads and no automatic Release trigger"
+  ],
+  "status": "complete",
+  "integration": "unmerged",
+  "evidence": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    ".github/actions/native-build/action.yml",
+    "scripts/Build-Actions.ps1",
+    "scripts/Package-Actions.ps1",
+    "scripts/Release-Actions.ps1",
+    "tests/release_actions_contract.ps1",
+    "docs/RELEASE.md"
+  ],
+  "next": "Push this task commit to origin/master only when requested. Then review naturally triggered CI; manual Release dispatch requires a specific user request and an existing tag containing this infrastructure."
+}
