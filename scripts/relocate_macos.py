@@ -51,7 +51,7 @@ def expand(name, binary, executable):
     return None
 
 
-def locate(name, binary, executable, paths, frameworks):
+def locate(name, binary, executable, paths, frameworks, library_dirs=()):
     direct = expand(name, binary, executable)
     if direct is not None and direct.exists():
         return direct.resolve()
@@ -65,10 +65,15 @@ def locate(name, binary, executable, paths, frameworks):
         # so this fallback does not depend on the original LC_RPATH surviving.
         if (frameworks / suffix).exists():
             return (frameworks / suffix).resolve()
+        # macdeployqt may copy a Homebrew library without its transitive peers
+        # or original rpaths. Resolve those peers from the build's explicit prefix.
+        for folder in library_dirs:
+            if (folder / suffix).is_file():
+                return (folder / suffix).resolve()
     raise RuntimeError(f'Unresolved dependency {name} in {binary}')
 
 
-def relocate(bundle, architecture):
+def relocate(bundle, architecture, library_dirs=()):
     bundle = bundle.resolve()
     executable = bundle / 'Contents/MacOS/scantailor-advanced'
     frameworks = bundle / 'Contents/Frameworks'
@@ -93,7 +98,7 @@ def relocate(bundle, architecture):
             if name in ids or system_path(name):
                 continue
             source = locate(name, origins.get(binary, binary), executable,
-                            paths + executable_paths, frameworks)
+                            paths + executable_paths, frameworks, library_dirs)
             target = source
             if not inside(source, bundle):
                 if any(part.endswith('.framework') for part in source.parts):
@@ -129,5 +134,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--bundle', type=Path, required=True)
     parser.add_argument('--arch', choices=('arm64', 'x86_64'), required=True)
+    parser.add_argument('--library-dir', type=Path, action='append', default=[])
     args = parser.parse_args()
-    relocate(args.bundle, args.arch)
+    relocate(args.bundle, args.arch, args.library_dir)

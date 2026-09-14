@@ -35,7 +35,7 @@ Copy-Item -LiteralPath (Join-Path $qtPlugins 'platforms/libqoffscreen.dylib') -D
 & "$QtRoot/bin/macdeployqt" $app "-executable=$cli" "-executable=$platformPlugins/libqoffscreen.dylib" -always-overwrite
 if ($LASTEXITCODE -ne 0) { throw 'Qt macOS deployment failed' }
 $nativeArch = if ($Architecture -eq 'x64') { 'x86_64' } else { 'arm64' }
-& $Python "$PSScriptRoot/relocate_macos.py" --bundle $app --arch $nativeArch
+& $Python "$PSScriptRoot/relocate_macos.py" --bundle $app --arch $nativeArch --library-dir "$env:MACOS_BREW_ROOT/lib"
 if ($LASTEXITCODE -ne 0) { throw 'macOS dependency relocation/audit failed' }
 # Development signature only. No Developer ID signing or notarization is claimed.
 codesign --force --deep --sign - $app

@@ -248,6 +248,6 @@
   "pending": [
     "0914-cli-screenshots/op-push",
     "0914-common-dpi/op-push-ssh",
-    "0914-macos-release/push-macos-02"
+    "0914-macos-release/push-macos-03"
   ]
 }

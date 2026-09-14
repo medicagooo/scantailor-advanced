@@ -73,6 +73,19 @@ class RelocationTests(unittest.TestCase):
         with patch.object(deploy, 'run', self.tool), self.assertRaisesRegex(RuntimeError, 'Unresolved'):
             deploy.relocate(self.bundle, 'arm64')
 
+    def test_deployed_library_missing_transitive_peer(self):
+        libs = self.root / 'brew libraries'
+        self.create(libs / 'libsharpyuv.0.dylib', 'yuv', ['/usr/lib/libSystem.B.dylib'], library=True)
+        self.create(self.bundle / 'Contents/Frameworks/libwebp.7.dylib', 'webp',
+                    ['@rpath/libsharpyuv.0.dylib'], library=True)
+        self.definitions['app']['deps'] = ['@rpath/libwebp.7.dylib']
+        with patch.object(deploy, 'run', self.tool):
+            deploy.relocate(self.bundle, 'arm64', [libs])
+        peer = self.bundle / 'Contents/Frameworks/libsharpyuv.0.dylib'
+        self.assertTrue(peer.is_file())
+        webp = str(self.bundle / 'Contents/Frameworks/libwebp.7.dylib')
+        self.assertEqual(self.state[webp]['deps'], ['@loader_path/libsharpyuv.0.dylib'])
+
     def test_external_framework_rejected(self):
         lib = self.create(self.root / 'QtCore.framework/Versions/A/QtCore', 'qt', [], library=True)
         self.definitions['app']['deps'] = [str(lib)]
